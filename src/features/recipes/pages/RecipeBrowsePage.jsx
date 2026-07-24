@@ -16,15 +16,32 @@ const COOK_TIME_OPTIONS = [
   { value: 'gt60', label: '> 60 min', min: 60, max: null },
 ]
 
+const getInitialFilter = (key, defaultVal) => {
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has(key)) {
+      const val = urlParams.get(key);
+      if (key === 'difficulty') return val ? val.split(',') : [];
+      if (key === 'page') return parseInt(val, 10) || 1;
+      return val;
+    }
+    const saved = sessionStorage.getItem(`cb_filter_${key}`);
+    if (saved !== null) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {}
+  return defaultVal;
+};
+
 export default function RecipeBrowsePage({ onNavigate }) {
-  // Filter state
-  const [search, setSearch] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState(null)
-  const [selectedCuisine, setSelectedCuisine] = useState(null)
-  const [selectedState, setSelectedState] = useState(null)
-  const [foodType, setFoodType] = useState('all')
-  const [difficulty, setDifficulty] = useState([])
-  const [cookTime, setCookTime] = useState('any')
+  // Filter state (persisted across navigation)
+  const [search, setSearch] = useState(() => getInitialFilter('search', ''))
+  const [selectedCategory, setSelectedCategory] = useState(() => getInitialFilter('category_id', null))
+  const [selectedCuisine, setSelectedCuisine] = useState(() => getInitialFilter('cuisine_id', null))
+  const [selectedState, setSelectedState] = useState(() => getInitialFilter('state_id', null))
+  const [foodType, setFoodType] = useState(() => getInitialFilter('food_type', 'all'))
+  const [difficulty, setDifficulty] = useState(() => getInitialFilter('difficulty', []))
+  const [cookTime, setCookTime] = useState(() => getInitialFilter('cookTime', 'any'))
   const [sortBy, setSortBy] = useState('popular')
 
   // Accordion open states
@@ -36,13 +53,39 @@ export default function RecipeBrowsePage({ onNavigate }) {
   const [filterOptions, setFilterOptions] = useState({ categories: [], states: [], cuisines: [] })
 
   // Results
-  const [page, setPage] = useState(1)
+  const [page, setPage] = useState(() => getInitialFilter('page', 1))
   const [recipes, setRecipes] = useState([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
 
   const searchTimeout = useRef(null)
   const LIMIT = 12
+
+  // Sync state to sessionStorage and URL
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('cb_filter_search', JSON.stringify(search));
+      sessionStorage.setItem('cb_filter_category_id', JSON.stringify(selectedCategory));
+      sessionStorage.setItem('cb_filter_cuisine_id', JSON.stringify(selectedCuisine));
+      sessionStorage.setItem('cb_filter_state_id', JSON.stringify(selectedState));
+      sessionStorage.setItem('cb_filter_food_type', JSON.stringify(foodType));
+      sessionStorage.setItem('cb_filter_difficulty', JSON.stringify(difficulty));
+      sessionStorage.setItem('cb_filter_cookTime', JSON.stringify(cookTime));
+      sessionStorage.setItem('cb_filter_page', JSON.stringify(page));
+
+      const url = new URL(window.location);
+      if (search) url.searchParams.set('search', search); else url.searchParams.delete('search');
+      if (selectedCategory) url.searchParams.set('category_id', selectedCategory); else url.searchParams.delete('category_id');
+      if (selectedCuisine) url.searchParams.set('cuisine_id', selectedCuisine); else url.searchParams.delete('cuisine_id');
+      if (selectedState) url.searchParams.set('state_id', selectedState); else url.searchParams.delete('state_id');
+      if (foodType !== 'all') url.searchParams.set('food_type', foodType); else url.searchParams.delete('food_type');
+      if (difficulty.length > 0) url.searchParams.set('difficulty', difficulty.join(',')); else url.searchParams.delete('difficulty');
+      if (cookTime !== 'any') url.searchParams.set('cookTime', cookTime); else url.searchParams.delete('cookTime');
+      if (page > 1) url.searchParams.set('page', page); else url.searchParams.delete('page');
+
+      window.history.replaceState(window.history.state, '', url.toString());
+    } catch (e) {}
+  }, [search, selectedCategory, selectedCuisine, selectedState, foodType, difficulty, cookTime, page]);
 
   // Load filter options on mount
   useEffect(() => {
@@ -80,11 +123,6 @@ export default function RecipeBrowsePage({ onNavigate }) {
     }
   }, [buildParams])
 
-  // Auto-trigger on any filter change (reset to page 1)
-  useEffect(() => {
-    setPage(1)
-  }, [selectedCategory, selectedCuisine, selectedState, foodType, difficulty, cookTime])
-
   // Fetch whenever page or filters change
   useEffect(() => { loadRecipes() }, [page, selectedCategory, selectedCuisine, selectedState, foodType, difficulty, cookTime])
 
@@ -92,6 +130,16 @@ export default function RecipeBrowsePage({ onNavigate }) {
     setSearch(''); setSelectedCategory(null); setSelectedCuisine(null)
     setSelectedState(null); setFoodType('all'); setDifficulty([]); setCookTime('any')
     setPage(1)
+    try {
+      sessionStorage.removeItem('cb_filter_search');
+      sessionStorage.removeItem('cb_filter_category_id');
+      sessionStorage.removeItem('cb_filter_cuisine_id');
+      sessionStorage.removeItem('cb_filter_state_id');
+      sessionStorage.removeItem('cb_filter_food_type');
+      sessionStorage.removeItem('cb_filter_difficulty');
+      sessionStorage.removeItem('cb_filter_cookTime');
+      sessionStorage.removeItem('cb_filter_page');
+    } catch (e) {}
   }
 
   const handleSearchChange = (val) => {
@@ -158,12 +206,29 @@ export default function RecipeBrowsePage({ onNavigate }) {
                 style={{ textAlign: 'left', padding: '7px 10px', borderRadius: 8, border: 'none', background: selectedCategory === null ? C.primaryLight : 'none', cursor: 'pointer', fontSize: 13, color: selectedCategory === null ? C.primary : C.ink2, fontFamily: 'inherit', fontWeight: selectedCategory === null ? 600 : 400 }}>
                 All Categories
               </button>
-              {filterOptions.categories.map(c => (
-                <button key={c.id} onClick={() => setSelectedCategory(c.id)}
-                  style={{ textAlign: 'left', padding: '7px 10px', borderRadius: 8, border: 'none', background: selectedCategory === c.id ? C.primaryLight : 'none', cursor: 'pointer', fontSize: 13, color: selectedCategory === c.id ? C.primary : C.ink2, fontFamily: 'inherit', fontWeight: selectedCategory === c.id ? 600 : 400 }}>
-                  {c.name}
-                </button>
-              ))}
+              {filterOptions.categories.map(c => {
+                const getCategoryEmoji = (name) => {
+                  const lower = name.toLowerCase();
+                  if (lower.includes('rice') || lower.includes('biryani')) return '🍚 ';
+                  if (lower.includes('breakfast')) return '🍳 ';
+                  if (lower.includes('lunch')) return '🍲 ';
+                  if (lower.includes('dinner')) return '🍛 ';
+                  if (lower.includes('dessert')) return '🍰 ';
+                  if (lower.includes('snack')) return '🍿 ';
+                  if (lower.includes('beverage')) return '🍹 ';
+                  if (lower.includes('soup')) return '🥣 ';
+                  if (lower.includes('salad')) return '🥗 ';
+                  if (lower.includes('side')) return '🍟 ';
+                  if (lower.includes('appetizer')) return '🥟 ';
+                  return '🍽️ ';
+                };
+                return (
+                  <button key={c.id} onClick={() => setSelectedCategory(c.id)}
+                    style={{ textAlign: 'left', padding: '7px 10px', borderRadius: 8, border: 'none', background: selectedCategory === c.id ? C.primaryLight : 'none', cursor: 'pointer', fontSize: 13, color: selectedCategory === c.id ? C.primary : C.ink2, fontFamily: 'inherit', fontWeight: selectedCategory === c.id ? 600 : 400 }}>
+                    {getCategoryEmoji(c.name)}{c.name}
+                  </button>
+                );
+              })}
               {filterOptions.categories.length === 0 && (
                 <span style={{ fontSize: 12, color: C.ink3, padding: '4px 10px' }}>Loading...</span>
               )}

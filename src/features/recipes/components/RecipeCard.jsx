@@ -21,7 +21,8 @@ export function RecipeCard({ recipe, size = 'default', onClick }) {
   const [hov, setHov] = useState(false)
   if (!recipe) return null;
   
-  const coverImage = recipe?.cover_image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'
+  const coverImage = recipe?.cover_image_url || recipe?.image_url || recipe?.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'
+  const fallbackImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'
   const isVeg = recipe.food_type === 'veg'
   const isPremium = recipe.is_premium === 1 || recipe.is_premium === true
   const timeLabel = `${recipe.total_time_min || 0} mins`
@@ -34,7 +35,7 @@ export function RecipeCard({ recipe, size = 'default', onClick }) {
       <div onClick={onClick} style={{ width: 240, flexShrink: 0, background: C.card, borderRadius: 16, overflow: 'hidden', boxShadow: hov ? '0 8px 30px rgba(0,0,0,0.12)' : '0 2px 12px rgba(0,0,0,0.06)', transition: 'all 0.22s ease', transform: hov ? 'translateY(-4px)' : 'none', cursor: 'pointer' }}
         onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
         <div style={{ position: 'relative', height: 140 }}>
-          <img src={coverImage} alt={recipe.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={coverImage} alt={recipe.title} onError={(e) => { e.target.src = fallbackImg }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           <div style={{ position: 'absolute', top: 8, left: 8 }}><VegBadge isVeg={isVeg} /></div>
           {isPremium && <div style={{ position: 'absolute', top: 8, right: 8 }}><PremiumBadge /></div>}
         </div>
@@ -59,7 +60,7 @@ export function RecipeCard({ recipe, size = 'default', onClick }) {
     <div onClick={onClick} style={{ background: C.card, borderRadius: 16, overflow: 'hidden', boxShadow: hov ? '0 8px 30px rgba(0,0,0,0.12)' : '0 2px 12px rgba(0,0,0,0.06)', transition: 'all 0.22s ease', transform: hov ? 'translateY(-4px)' : 'none', cursor: 'pointer', border: `1px solid ${C.border}` }}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
       <div style={{ position: 'relative', height: 200 }}>
-        <img src={coverImage} alt={recipe.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img src={coverImage} alt={recipe.title} onError={(e) => { e.target.src = fallbackImg }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 50%)' }} />
         <div style={{ position: 'absolute', top: 10, left: 10, display: 'flex', gap: 6 }}>
           <VegBadge isVeg={isVeg} />
