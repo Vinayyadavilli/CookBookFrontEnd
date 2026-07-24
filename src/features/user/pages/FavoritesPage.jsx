@@ -20,9 +20,48 @@ import { RecipeCard } from '@/features/recipes/components/RecipeCard';
 import { NavBar } from '@/shared/components/navigation/NavBar';
 import { LandingNavBar } from '@/shared/components/navigation/LandingNavBar';
 
+import { fetchFavorites, removeFavorite } from '@/features/recipes/api/engagement';
+import { fetchRecipeDetails } from '@/features/recipes/api';
+
 export default function FavoritesPage({ onNavigate }) {
   const [tab, setTab] = useState('recipes')
-  const [favorites, setFavorites] = useState(RECIPES.slice(0, 6))
+  const [favorites, setFavorites] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadFavs = async () => {
+      try {
+        setLoading(true);
+        const res = await fetchFavorites();
+        const items = res.data || [];
+        const detailedRecipes = await Promise.all(
+          items.map(async f => {
+            try {
+              const rRes = await fetchRecipeDetails(f.recipe_id);
+              return rRes.data;
+            } catch (e) {
+              return null;
+            }
+          })
+        );
+        setFavorites(detailedRecipes.filter(Boolean));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadFavs();
+  }, []);
+
+  const handleRemoveFavorite = async (recipeId) => {
+    setFavorites(prev => prev.filter(f => f.id !== recipeId));
+    try {
+      await removeFavorite(recipeId);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   return (
     <div style={{ paddingTop: 72, background: C.bg, minHeight: '100vh' }}>
@@ -38,16 +77,16 @@ export default function FavoritesPage({ onNavigate }) {
         </div>
 
         {tab === 'recipes' && (
-          favorites.length > 0 ? (
+          loading ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: C.ink2 }}>Loading your saved recipes...</div>
+          ) : favorites.length > 0 ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
               {favorites.map(r => (
                 <div key={r.id} style={{ position: 'relative' }}>
-                  <RecipeCard recipe={r} onClick={() => onNavigate && onNavigate('recipe-detail')} />
-                  <button onClick={() => setFavorites(prev => prev.filter(f => f.id !== r.id))}
-                    style={{ position: 'absolute', top: 50, right: 10, width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.95)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', transition: 'all 0.15s' }}
-                    title="Remove from favorites"
-                    onMouseEnter={e => { e.currentTarget.style.background = '#FFF0F1' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.95)' }}>
+                  <RecipeCard recipe={r} isFavorite={true} onClick={() => onNavigate && onNavigate('recipe-detail', { recipeId: r.id })} />
+                  <button onClick={() => handleRemoveFavorite(r.id)}
+                    style={{ position: 'absolute', top: 10, right: 10, width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.95)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', transition: 'all 0.15s' }}
+                    title="Remove from favorites">
                     <Heart size={16} color={C.red} fill={C.red} />
                   </button>
                 </div>
@@ -58,7 +97,7 @@ export default function FavoritesPage({ onNavigate }) {
               <div style={{ fontSize: 64, marginBottom: 16 }}>💝</div>
               <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 24, color: C.ink, margin: 0, marginBottom: 12 }}>No favorites yet!</h3>
               <p style={{ fontSize: 15, color: C.ink2, margin: 0, marginBottom: 24 }}>Start saving recipes you love and they'll appear here.</p>
-              <Button variant="primary" size="md" icon={<Search size={14} />}>Explore Recipes</Button>
+              <Button variant="primary" size="md" icon={<Search size={14} />} onClick={() => onNavigate && onNavigate('recipes')}>Explore Recipes</Button>
             </div>
           )
         )}

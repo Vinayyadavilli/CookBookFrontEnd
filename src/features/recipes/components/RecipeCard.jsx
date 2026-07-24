@@ -16,10 +16,32 @@ import { RECIPES, TRENDING, CATEGORIES, ALL_SCREENS } from '@/shared/data/mockDa
 
 import { VegBadge, PremiumBadge, DifficultyBadge } from '@/shared/components/ui/Badges';
 import { RatingStars } from '@/shared/components/ui/RatingStars';
-export function RecipeCard({ recipe, size = 'default', onClick }) {
-  const [saved, setSaved] = useState(false)
+import { addFavorite, removeFavorite } from '@/features/recipes/api/engagement';
+
+export function RecipeCard({ recipe, isFavorite = false, size = 'default', onClick }) {
+  const [saved, setSaved] = useState(isFavorite)
   const [hov, setHov] = useState(false)
+
+  useEffect(() => {
+    setSaved(isFavorite);
+  }, [isFavorite]);
+
   if (!recipe) return null;
+
+  const handleBookmarkClick = async (e) => {
+    e.stopPropagation();
+    const nextState = !saved;
+    setSaved(nextState);
+    try {
+      if (nextState) {
+        await addFavorite(recipe.id);
+      } else {
+        await removeFavorite(recipe.id);
+      }
+    } catch (err) {
+      setSaved(!nextState);
+    }
+  };
   
   const coverImage = recipe?.cover_image_url || recipe?.image_url || recipe?.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'
   const fallbackImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'
@@ -66,7 +88,7 @@ export function RecipeCard({ recipe, size = 'default', onClick }) {
           <VegBadge isVeg={isVeg} />
           {isPremium && <PremiumBadge />}
         </div>
-        <button onClick={(e) => { e.stopPropagation(); setSaved(!saved) }}
+        <button onClick={handleBookmarkClick}
           style={{ position: 'absolute', top: 10, right: 10, width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.95)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}>
           {saved ? <BookmarkCheck size={16} color={C.primary} fill={C.primary} /> : <Bookmark size={16} color={C.ink2} />}
         </button>

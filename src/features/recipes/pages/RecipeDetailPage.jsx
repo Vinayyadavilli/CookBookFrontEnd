@@ -20,6 +20,7 @@ import { RecipeCard } from '@/features/recipes/components/RecipeCard';
 import { NavBar } from '@/shared/components/navigation/NavBar';
 import { LandingNavBar } from '@/shared/components/navigation/LandingNavBar';
 import { fetchRecipeDetails, fetchScaledServings } from '@/features/recipes/api';
+import { addFavorite, removeFavorite, rateRecipe, likeRecipe, submitReview } from '@/features/recipes/api/engagement';
 
 export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
   const [activeTab, setActiveTab] = useState('ingredients')
@@ -32,6 +33,10 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
   const [baseIngredients, setBaseIngredients] = useState([])
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [customValue, setCustomValue] = useState('')
+  const [showRatingModal, setShowRatingModal] = useState(false)
+  const [reviewComment, setReviewComment] = useState('')
+  const [submittingReview, setSubmittingReview] = useState(false)
+  const [reviewsList, setReviewsList] = useState([])
 
   useEffect(() => {
     if (!recipeId) return
@@ -97,17 +102,31 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
           </div>
           {/* Action row */}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {[
-              { icon: saved ? <BookmarkCheck size={16} color={C.primary} /> : <Bookmark size={16} />, label: saved ? 'Saved' : 'Save', action: () => setSaved(!saved), active: saved },
-              { icon: <Plus size={16} />, label: 'Add to Meal Plan', action: () => onNavigate && onNavigate('meal-planner'), active: true },
-              { icon: <Star size={16} fill={userRating > 0 ? C.gold : 'none'} color={userRating > 0 ? C.gold : '#fff'} />, label: 'Rate', action: () => setUserRating(5), active: userRating > 0 },
-              { icon: <Heart size={16} fill={liked ? C.red : 'none'} color={liked ? C.red : '#fff'} />, label: liked ? 'Liked' : 'Like', action: () => setLiked(!liked), active: liked },
-            ].map(a => (
-              <button key={a.label} onClick={a.action}
-                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 999, border: `1.5px solid ${a.active ? 'transparent' : 'rgba(255,255,255,0.3)'}`, background: a.active ? '#fff' : 'rgba(255,255,255,0.12)', color: a.active ? C.primary : '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', backdropFilter: 'blur(8px)', transition: 'all 0.15s', fontFamily: 'inherit' }}>
-                {a.icon}{a.label}
-              </button>
-            ))}
+            <button onClick={async () => {
+                const nextState = !saved; setSaved(nextState);
+                try { if (nextState) await addFavorite(recipe.id); else await removeFavorite(recipe.id); }
+                catch (e) { setSaved(!nextState); }
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 999, border: `1.5px solid ${saved ? 'transparent' : 'rgba(255,255,255,0.3)'}`, background: saved ? '#fff' : 'rgba(255,255,255,0.12)', color: saved ? C.primary : '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', backdropFilter: 'blur(8px)', transition: 'all 0.15s', fontFamily: 'inherit' }}>
+              {saved ? <BookmarkCheck size={16} color={C.primary} /> : <Bookmark size={16} />}{saved ? 'Saved' : 'Save'}
+            </button>
+            <button onClick={() => onNavigate && onNavigate('meal-planner')}
+              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 999, border: '1.5px solid transparent', background: '#fff', color: C.primary, fontSize: 13, fontWeight: 600, cursor: 'pointer', backdropFilter: 'blur(8px)', transition: 'all 0.15s', fontFamily: 'inherit' }}>
+              <Plus size={16} />Add to Meal Plan
+            </button>
+            <button onClick={() => setShowRatingModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 999, border: `1.5px solid ${userRating > 0 ? 'transparent' : 'rgba(255,255,255,0.3)'}`, background: userRating > 0 ? '#fff' : 'rgba(255,255,255,0.12)', color: userRating > 0 ? C.gold : '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', backdropFilter: 'blur(8px)', transition: 'all 0.15s', fontFamily: 'inherit' }}>
+              <Star size={16} fill={userRating > 0 ? C.gold : 'none'} color={userRating > 0 ? C.gold : '#fff'} />
+              {userRating > 0 ? `Rated ${userRating}★ (${recipe.rating_count || 0})` : `Rate & Review ✍️ (${recipe.rating_count || 0})`}
+            </button>
+            <button onClick={async () => {
+                const nextLiked = !liked; setLiked(nextLiked);
+                try { await likeRecipe(recipe.id, nextLiked ? 'like' : 'dislike'); }
+                catch (e) { setLiked(!nextLiked); }
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 999, border: `1.5px solid ${liked ? 'transparent' : 'rgba(255,255,255,0.3)'}`, background: liked ? '#fff' : 'rgba(255,255,255,0.12)', color: liked ? C.red : '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', backdropFilter: 'blur(8px)', transition: 'all 0.15s', fontFamily: 'inherit' }}>
+              <Heart size={16} fill={liked ? C.red : 'none'} color={liked ? C.red : '#fff'} />{liked ? 'Liked' : 'Like'}
+            </button>
           </div>
         </div>
       </div>
@@ -115,7 +134,7 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
       {/* ── Sticky Tabs ── */}
       <div style={{ position: 'sticky', top: 72, zIndex: 50, background: C.card, borderBottom: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', gap: 0, padding: '0 40px' }}>
-          {['ingredients', 'steps', 'nutrition', 'tips'].map(tab => (
+          {['ingredients', 'steps', 'nutrition', 'reviews'].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               style={{ padding: '16px 24px', border: 'none', background: 'none', fontSize: 14, fontWeight: activeTab === tab ? 700 : 500, color: activeTab === tab ? C.primary : C.ink2, cursor: 'pointer', fontFamily: 'inherit', borderBottom: `3px solid ${activeTab === tab ? C.primary : 'transparent'}`, textTransform: 'capitalize', transition: 'all 0.15s' }}>
               {tab}
@@ -290,33 +309,81 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
           </div>
         )}
 
-        {/* TIPS TAB */}
-        {activeTab === 'tips' && (
+        {/* REVIEWS TAB */}
+        {activeTab === 'reviews' && (
           <div>
-            <div style={{ background: 'linear-gradient(135deg, #FFF7E6 0%, #FFF0EA 100%)', borderRadius: 16, padding: '24px', marginBottom: 24, border: `1px solid rgba(246,201,14,0.3)` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 18 }}>👨‍🍳</span>
-                </div>
-                <span style={{ fontSize: 16, fontWeight: 700, color: C.ink }}>Chef's Tips</span>
+            {/* Submit Review Box */}
+            <div style={{ background: C.card, borderRadius: 16, padding: '24px', border: `1px solid ${C.border}`, marginBottom: 32 }}>
+              <h4 style={{ fontSize: 18, fontWeight: 700, color: C.ink, margin: 0, marginBottom: 16 }}>Rate & Review this Recipe</h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                <span style={{ fontSize: 14, color: C.ink2, fontWeight: 500 }}>Your Rating:</span>
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button key={star} onClick={async () => {
+                      const isFirstRate = userRating === 0;
+                      setUserRating(star);
+                      try {
+                        const res = await rateRecipe(recipe.id, star);
+                        setRecipe(prev => ({
+                          ...prev,
+                          avg_rating: res?.avg_rating != null ? res.avg_rating : prev.avg_rating,
+                          rating_count: res?.rating_count != null ? res.rating_count : (prev.rating_count || 0) + (isFirstRate ? 1 : 0)
+                        }));
+                      } catch (e) {}
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}>
+                    <Star size={24} fill={star <= userRating ? C.gold : 'none'} color={star <= userRating ? C.gold : C.ink3} />
+                  </button>
+                ))}
               </div>
-              <p style={{ fontSize: 15, color: C.ink2, lineHeight: 1.7, margin: 0, fontStyle: 'italic' }}>
-                "{recipe.chef_tips || 'No specific tips from the chef for this recipe.'}"
-              </p>
+              <textarea
+                rows={3}
+                placeholder="Share your cooking experience, tips, or flavor feedback..."
+                value={reviewComment}
+                onChange={e => setReviewComment(e.target.value)}
+                style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: `1.5px solid ${C.border}`, fontSize: 14, color: C.ink, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 16, resize: 'vertical' }}
+              />
+              <Button
+                variant="primary"
+                size="md"
+                disabled={submittingReview || !reviewComment.trim()}
+                onClick={async () => {
+                  try {
+                    setSubmittingReview(true);
+                    await submitReview(recipe.id, reviewComment.trim());
+                    setReviewsList(prev => [{ user: 'You', comment: reviewComment.trim(), created_at: 'Just now', rating: userRating || 5 }, ...prev]);
+                    setReviewComment('');
+                  } catch (e) {
+                    alert(e.message || 'Failed to submit review');
+                  } finally {
+                    setSubmittingReview(false);
+                  }
+                }}>
+                {submittingReview ? 'Submitting...' : 'Post Review 💬'}
+              </Button>
             </div>
-            <div style={{ background: C.card, borderRadius: 16, padding: '24px', border: `1px solid ${C.border}`, marginBottom: 24 }}>
-              <h4 style={{ fontSize: 16, fontWeight: 700, color: C.ink, margin: 0, marginBottom: 16 }}>Cooking Tips</h4>
-              {(recipe.cooking_tips ? recipe.cooking_tips.split('\n').filter(t => t.trim()) : ['Follow instructions carefully']).map((tip, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
-                  <Check size={16} color={C.green} strokeWidth={2.5} style={{ flexShrink: 0, marginTop: 2 }} />
-                  <span style={{ fontSize: 14, color: C.ink2, lineHeight: 1.6 }}>{tip}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {(recipe.tags || []).map(tag => (
-                <span key={tag} style={{ padding: '6px 14px', borderRadius: 999, background: C.primaryLight, color: C.primary, fontSize: 13, fontWeight: 600 }}>#{tag}</span>
-              ))}
+
+            {/* Reviews List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <h4 style={{ fontSize: 18, fontWeight: 700, color: C.ink, margin: 0 }}>Community Reviews</h4>
+              {reviewsList.length > 0 ? (
+                reviewsList.map((rev, idx) => (
+                  <div key={idx} style={{ background: C.card, borderRadius: 12, padding: '16px 20px', border: `1px solid ${C.border}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: C.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: C.primary, fontSize: 13 }}>
+                          {rev.user ? rev.user[0].toUpperCase() : 'U'}
+                        </div>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>{rev.user || 'User'}</span>
+                      </div>
+                      <span style={{ fontSize: 12, color: C.ink3 }}>{rev.created_at || 'Recently'}</span>
+                    </div>
+                    <RatingStars rating={rev.rating || 5} />
+                    <p style={{ fontSize: 14, color: C.ink2, marginTop: 8, margin: 0, lineHeight: 1.5 }}>{rev.comment}</p>
+                  </div>
+                ))
+              ) : (
+                <div style={{ textAlign: 'center', padding: '30px 0', color: C.ink2, fontSize: 14 }}>Be the first to review this recipe!</div>
+              )}
             </div>
           </div>
         )}
@@ -330,6 +397,73 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
           </div>
         </div>
       </div>
+
+      {/* ── Interactive Rate & Review Modal ── */}
+      {showRatingModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowRatingModal(false)}>
+          <div style={{ background: C.card, borderRadius: 24, padding: 32, maxWidth: 440, width: '90%', textAlign: 'left' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 22, fontWeight: 800, color: C.ink, margin: 0, marginBottom: 6, fontFamily: "'Playfair Display', Georgia, serif" }}>Rate & Review Recipe</h3>
+            <p style={{ fontSize: 14, color: C.ink2, margin: 0, marginBottom: 20 }}>How was your experience cooking {recipe.title}?</p>
+
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: C.ink, marginBottom: 8 }}>Your Star Rating:</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button key={star} onClick={() => setUserRating(star)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}>
+                    <Star size={30} fill={star <= userRating ? C.gold : 'none'} color={star <= userRating ? C.gold : C.ink3} />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: C.ink, marginBottom: 8 }}>Write your review (optional):</div>
+              <textarea
+                rows={3}
+                placeholder="Write your feedback, tips, or taste notes..."
+                value={reviewComment}
+                onChange={e => setReviewComment(e.target.value)}
+                style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: `1.5px solid ${C.border}`, fontSize: 14, color: C.ink, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', resize: 'vertical' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <Button
+                variant="primary"
+                size="md"
+                disabled={submittingReview || userRating === 0}
+                onClick={async () => {
+                  try {
+                    setSubmittingReview(true);
+                    const isFirstRate = userRating > 0 && recipe.user_rating == null;
+                    if (userRating > 0) {
+                      const res = await rateRecipe(recipe.id, userRating);
+                      setRecipe(prev => ({
+                        ...prev,
+                        avg_rating: res?.avg_rating != null ? res.avg_rating : prev.avg_rating,
+                        rating_count: res?.rating_count != null ? res.rating_count : (prev.rating_count || 0) + (isFirstRate ? 1 : 0)
+                      }));
+                    }
+                    if (reviewComment.trim()) {
+                      await submitReview(recipe.id, reviewComment.trim());
+                      setReviewsList(prev => [{ user: 'You', comment: reviewComment.trim(), created_at: 'Just now', rating: userRating || 5 }, ...prev]);
+                      setReviewComment('');
+                    }
+                    setShowRatingModal(false);
+                  } catch (e) {
+                    alert(e.message || 'Failed to submit review');
+                  } finally {
+                    setSubmittingReview(false);
+                  }
+                }}>
+                {submittingReview ? 'Submitting...' : 'Submit Rating & Review'}
+              </Button>
+              <Button variant="outline" size="md" onClick={() => setShowRatingModal(false)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
