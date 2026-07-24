@@ -19,10 +19,36 @@ import { Button } from '@/shared/components/ui/Button';
 import { RecipeCard } from '@/features/recipes/components/RecipeCard';
 import { NavBar } from '@/shared/components/navigation/NavBar';
 import { LandingNavBar } from '@/shared/components/navigation/LandingNavBar';
+import { fetchUserProfile } from '@/features/user/api';
+import { fetchFeaturedRecipes, fetchTrendingRecipes, fetchRecipes } from '@/features/recipes/api';
 
 export default function HomeDashboard({ onNavigate }) {
   const [activeFilter, setActiveFilter] = useState('All')
   const filters = ['All', 'Veg', 'Non-Veg', 'Breakfast', 'Snacks', 'Protein']
+  const [profileData, setProfileData] = useState(null)
+  const [featured, setFeatured] = useState([])
+  const [trending, setTrending] = useState([])
+  const [goalRecipes, setGoalRecipes] = useState([])
+  
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [profileRes, featRes, trendRes, goalRes] = await Promise.all([
+          fetchUserProfile().catch(() => ({ data: null })),
+          fetchFeaturedRecipes().catch(() => ({ data: [] })),
+          fetchTrendingRecipes().catch(() => ({ data: [] })),
+          fetchRecipes({ limit: 4 }).catch(() => ({ data: [] }))
+        ])
+        setProfileData(profileRes.data)
+        setFeatured(featRes.data || [])
+        setTrending(trendRes.data || [])
+        setGoalRecipes(goalRes.data || [])
+      } catch (err) {
+        console.error(err)
+      }
+    }
+    loadData()
+  }, [])
 
   return (
     <div style={{ paddingTop: 72, background: C.bg, minHeight: '100vh' }}>
@@ -35,18 +61,18 @@ export default function HomeDashboard({ onNavigate }) {
           <div style={{ zIndex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
               <span style={{ fontSize: 24 }}>☀️</span>
-              <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 26, fontWeight: 700, color: '#fff', margin: 0 }}>Good morning, Vinay!</h2>
+              <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 26, fontWeight: 700, color: '#fff', margin: 0 }}>Good morning, {profileData?.full_name?.split(' ')[0] || 'Chef'}!</h2>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.88)', fontSize: 16, margin: 0, marginBottom: 24, fontWeight: 500 }}>
-              You need <strong style={{ color: '#fff' }}>2,100 kcal</strong> today to reach your weight gain goal 💪
+              You need <strong style={{ color: '#fff' }}>{profileData?.profile?.daily_calories ? Math.round(profileData.profile.daily_calories).toLocaleString() : '2,000'} kcal</strong> today to reach your {profileData?.profile?.goal?.replace('_', ' ') || 'nutrition'} goal 💪
             </p>
             {/* Stats row */}
             <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
               {[
-                { label: 'BMI', value: '22.4', sub: 'Normal', color: C.green },
-                { label: 'Goal', value: 'Weight Gain', sub: 'Active', color: C.gold },
-                { label: 'Daily Target', value: '2,100 kcal', sub: 'Protein: 140g', color: '#fff' },
-                { label: 'Water', value: '2.5 L', sub: 'Today\'s quota', color: '#7DD3F8' },
+                { label: 'BMI', value: profileData?.profile?.bmi ? profileData.profile.bmi.toFixed(1) : '—', sub: (profileData?.profile?.bmi > 25 ? 'Overweight' : (profileData?.profile?.bmi < 18.5 ? 'Underweight' : 'Normal')), color: C.green },
+                { label: 'Goal', value: profileData?.profile?.goal ? profileData.profile.goal.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : '—', sub: profileData?.profile?.activity_level ? profileData.profile.activity_level.replace('_', ' ') : '—', color: C.gold },
+                { label: 'Daily Target', value: profileData?.profile?.daily_calories ? `${Math.round(profileData.profile.daily_calories).toLocaleString()} kcal` : '—', sub: profileData?.profile?.protein_g ? `Protein: ${Math.round(profileData.profile.protein_g)}g` : '—', color: '#fff' },
+                { label: 'Water', value: profileData?.profile?.water_ml ? `${(profileData.profile.water_ml / 1000).toFixed(1)} L` : '—', sub: 'Today\'s quota', color: '#7DD3F8' },
               ].map(s => (
                 <div key={s.label} style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', borderRadius: 14, padding: '12px 18px', minWidth: 120 }}>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{s.label}</div>
@@ -88,7 +114,7 @@ export default function HomeDashboard({ onNavigate }) {
           <Button variant="ghost" size="sm" icon={<ChevronRight size={14} />} onClick={() => onNavigate('recipes')}>View all recipes</Button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
-          {RECIPES.slice(0, 4).map(r => <RecipeCard key={r.id} recipe={r} />)}
+          {featured.map(r => <RecipeCard key={r.id} recipe={r} onClick={() => onNavigate('recipe-detail')} />)}
         </div>
       </section>
 
@@ -102,7 +128,7 @@ export default function HomeDashboard({ onNavigate }) {
           <Button variant="ghost" size="sm" icon={<ChevronRight size={14} />} onClick={() => onNavigate('recipes')}>View all</Button>
         </div>
         <div style={{ display: 'flex', gap: 16, overflowX: 'auto', padding: '8px 0 12px', scrollSnapType: 'x mandatory' }}>
-          {TRENDING.map(r => <div key={r.id} style={{ scrollSnapAlign: 'start' }}><RecipeCard recipe={r} size="trending" onClick={() => onNavigate('recipe-detail')} /></div>)}
+          {trending.map(r => <div key={r.id} style={{ scrollSnapAlign: 'start' }}><RecipeCard recipe={r} size="trending" onClick={() => onNavigate('recipe-detail')} /></div>)}
         </div>
       </section>
 
@@ -119,37 +145,37 @@ export default function HomeDashboard({ onNavigate }) {
           <Button variant="ghost" size="sm" icon={<ChevronRight size={14} />} onClick={() => onNavigate('recipes')}>View all</Button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
-          {RECIPES.slice(4, 8).map(r => (
+          {goalRecipes.map(r => (
             <div key={r.id} onClick={() => onNavigate('recipe-detail')} style={{ background: C.card, borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: `1px solid ${C.border}`, cursor: 'pointer', transition: 'all 0.22s ease' }}
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.12)' }}
               onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)' }}>
               <div style={{ position: 'relative', height: 160 }}>
-                <img src={r.image} alt={r.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={r.cover_image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'} alt={r.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 60%)' }} />
-                <div style={{ position: 'absolute', top: 8, left: 8 }}><VegBadge isVeg={r.isVeg} /></div>
+                <div style={{ position: 'absolute', top: 8, left: 8 }}><VegBadge isVeg={r.food_type === 'veg'} /></div>
                 {/* Calorie badge */}
                 <div style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(255,107,53,0.92)', borderRadius: 8, padding: '4px 9px', display: 'flex', alignItems: 'center', gap: 4 }}>
                   <Flame size={11} color="#fff" />
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{r.calories} kcal</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{Math.round(r.calories_per_serving || 0)} kcal</span>
                 </div>
               </div>
               <div style={{ padding: '12px 14px' }}>
                 <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.ink, marginBottom: 8 }}>{r.title}</h4>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <RatingStars rating={r.rating} />
-                  <span style={{ fontSize: 11, color: C.ink2 }}>{r.time}</span>
+                  <RatingStars rating={parseFloat(r.avg_rating || 0)} />
+                  <span style={{ fontSize: 11, color: C.ink2 }}>{r.total_time_min || 0} mins</span>
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                   <div style={{ flex: 1, background: '#E8F9F0', borderRadius: 8, padding: '6px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: C.green }}>{r.protein}g</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.green }}>{Math.round(r.protein_g || 0)}g</div>
                     <div style={{ fontSize: 10, color: C.ink3 }}>Protein</div>
                   </div>
                   <div style={{ flex: 1, background: '#EBF8FF', borderRadius: 8, padding: '6px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#3182CE' }}>{r.carbs}g</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#3182CE' }}>{Math.round(r.carbs_g || 0)}g</div>
                     <div style={{ fontSize: 10, color: C.ink3 }}>Carbs</div>
                   </div>
                   <div style={{ flex: 1, background: '#FFF0F1', borderRadius: 8, padding: '6px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: C.red }}>{r.fat}g</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.red }}>{Math.round(r.fat_g || 0)}g</div>
                     <div style={{ fontSize: 10, color: C.ink3 }}>Fat</div>
                   </div>
                 </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { ChefHat, ChevronRight, ChevronLeft, Check, TrendingUp, TrendingDown, Minus, Zap, Flame, Droplets } from 'lucide-react'
+import { ChefHat, ChevronRight, ChevronLeft, Check, TrendingUp, TrendingDown, Minus, Zap, Flame, Droplets, Loader2 } from 'lucide-react'
+import { updateUserProfile } from '@/features/user/api'
 
 function ProgressBar({ step, total }) {
   const pct = (step / total) * 100
@@ -236,6 +237,7 @@ function BMIGauge({ bmi }) {
 }
 
 function StepSummary({ data, onComplete }) {
+  const [saving, setSaving] = useState(false)
   const bmr = data.gender === 'male'
     ? 10 * data.weightKg + 6.25 * data.heightCm - 5 * data.age + 5
     : 10 * data.weightKg + 6.25 * data.heightCm - 5 * data.age - 161
@@ -250,6 +252,34 @@ function StepSummary({ data, onComplete }) {
   const goalLabels = { lose: 'Lose Weight', maintain: 'Maintain Weight', gain: 'Gain Muscle' }
   const prefLabels = { veg: 'Pure Vegetarian', eggetarian: 'Eggetarian', nonveg: 'Non-Vegetarian' }
   const activityLabels = ['Sedentary', 'Lightly Active', 'Moderately Active', 'Very Active', 'Athlete']
+
+  const handleComplete = async () => {
+    try {
+      setSaving(true)
+      
+      const goalMap = { lose: 'weight_loss', maintain: 'maintain', gain: 'weight_gain' }
+      const actMap = ['sedentary', 'light', 'moderate', 'heavy', 'athlete']
+      const prefMap = { veg: 'veg', eggetarian: 'eggetarian', nonveg: 'non_veg' }
+
+      await updateUserProfile({
+        age: data.age,
+        gender: data.gender,
+        height_cm: data.heightCm,
+        weight_kg: data.weightKg,
+        target_weight_kg: data.targetWeightKg,
+        activity_level: data.activityLevel >= 0 ? actMap[data.activityLevel] : 'light',
+        goal: data.goal ? goalMap[data.goal] : 'maintain',
+        food_preference: data.foodPref ? prefMap[data.foodPref] : 'veg'
+      })
+      onComplete()
+    } catch (err) {
+      console.error('Failed to save onboarding data:', err)
+      // Call onComplete anyway to not block the user, or show error toast
+      onComplete()
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div>
@@ -294,9 +324,10 @@ function StepSummary({ data, onComplete }) {
         </div>
       </div>
 
-      <button onClick={onComplete}
-        style={{ width: '100%', padding: '16px', borderRadius: 999, border: 'none', background: 'linear-gradient(135deg, #FF6B35 0%, #E55A2B 100%)', color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 6px 24px rgba(255,107,53,0.35)', letterSpacing: '0.01em' }}>
-        Start Exploring Recipes <ChevronRight size={18} />
+      <button onClick={handleComplete} disabled={saving}
+        style={{ width: '100%', padding: '16px', borderRadius: 999, border: 'none', background: 'linear-gradient(135deg, #FF6B35 0%, #E55A2B 100%)', color: '#fff', fontSize: 16, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 6px 24px rgba(255,107,53,0.35)', letterSpacing: '0.01em', opacity: saving ? 0.7 : 1 }}>
+        {saving ? <Loader2 size={18} className="spin" style={{ animation: 'spin 1s linear infinite' }} /> : 'Start Exploring Recipes'}
+        {!saving && <ChevronRight size={18} />}
       </button>
     </div>
   )

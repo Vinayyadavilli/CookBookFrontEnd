@@ -19,11 +19,95 @@ import { Button } from '@/shared/components/ui/Button';
 import { RecipeCard } from '@/features/recipes/components/RecipeCard';
 import { NavBar } from '@/shared/components/navigation/NavBar';
 import { LandingNavBar } from '@/shared/components/navigation/LandingNavBar';
+import { fetchUserProfile, updateUserProfile, uploadProfileImage } from '../api';
 
 export default function ProfilePage({ onNavigate, onLogout, isPremium }) {
   const [activeSection, setActiveSection] = useState('profile')
-  const [editName, setEditName] = useState('Vinay Yadavilli')
-  const [editMobile, setEditMobile] = useState('9876543210')
+  const [profileData, setProfileData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  // Profile edits
+  const [editName, setEditName] = useState('')
+  const [editMobile, setEditMobile] = useState('')
+
+  // Health edits
+  const [editAge, setEditAge] = useState('')
+  const [editGender, setEditGender] = useState('')
+  const [editHeight, setEditHeight] = useState('')
+  const [editWeight, setEditWeight] = useState('')
+  const [editTargetWeight, setEditTargetWeight] = useState('')
+  const [editActivityLevel, setEditActivityLevel] = useState('moderate')
+  const [editGoal, setEditGoal] = useState('maintain')
+  const [editFoodPref, setEditFoodPref] = useState('veg')
+
+  useEffect(() => {
+    loadProfile()
+  }, [])
+
+  const loadProfile = async () => {
+    try {
+      setLoading(true)
+      const res = await fetchUserProfile()
+      const d = res.data
+      setProfileData(d)
+      setEditName(d.full_name || '')
+      setEditMobile(d.mobile || '')
+      
+      const p = d.profile || {}
+      setEditAge(p.age || '')
+      setEditGender(p.gender || 'male')
+      setEditHeight(p.height_cm || '')
+      setEditWeight(p.weight_kg || '')
+      setEditTargetWeight(p.target_weight_kg || '')
+      setEditActivityLevel(p.activity_level || 'moderate')
+      setEditGoal(p.goal || 'maintain')
+      setEditFoodPref(p.food_preference || 'veg')
+    } catch (err) {
+      console.error(err)
+      if (err.message.includes('401') || err.message.toLowerCase().includes('failed to fetch')) {
+        onLogout()
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSaveProfile = async () => {
+    try {
+      setSaving(true)
+      await updateUserProfile({
+        full_name: editName,
+        mobile: editMobile,
+      })
+      await loadProfile()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSaveHealth = async () => {
+    try {
+      setSaving(true)
+      await updateUserProfile({
+        age: editAge ? parseInt(editAge) : null,
+        gender: editGender,
+        height_cm: editHeight ? parseFloat(editHeight) : null,
+        weight_kg: editWeight ? parseFloat(editWeight) : null,
+        target_weight_kg: editTargetWeight ? parseFloat(editTargetWeight) : null,
+        activity_level: editActivityLevel,
+        goal: editGoal,
+        food_preference: editFoodPref,
+      })
+      await loadProfile()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const navItems = [
     { id: 'profile', label: 'Profile Information', icon: <Users size={16} /> },
@@ -35,14 +119,40 @@ export default function ProfilePage({ onNavigate, onLogout, isPremium }) {
     { id: 'help', label: 'Help & Support', icon: <HelpCircle size={16} /> },
   ]
 
-  const healthMetrics = [
-    { label: 'BMI', value: '22.4', sub: 'Normal', color: C.green },
-    { label: 'BMR', value: '1,724', sub: 'kcal/day', color: '#3182CE' },
-    { label: 'TDEE', value: '2,344', sub: 'kcal/day', color: '#9F7AEA' },
-    { label: 'Target', value: '2,100', sub: 'kcal/day', color: C.primary },
-    { label: 'Protein', value: '140g', sub: 'daily goal', color: C.green },
-    { label: 'Water', value: '2.5L', sub: 'daily quota', color: '#0BC5EA' },
-  ]
+  const healthMetrics = profileData?.profile ? [
+    { label: 'BMI', value: profileData.profile.bmi ? profileData.profile.bmi.toFixed(1) : '—', sub: profileData.profile.bmi > 25 ? 'Overweight' : 'Normal', color: C.green, icon: <Activity size={20} color={C.green} /> },
+    { label: 'BMR', value: profileData.profile.bmr ? Math.round(profileData.profile.bmr).toLocaleString() : '—', sub: 'kcal/day', color: '#3182CE', icon: <Flame size={20} color={'#3182CE'} /> },
+    { label: 'TDEE', value: profileData.profile.tdee ? Math.round(profileData.profile.tdee).toLocaleString() : '—', sub: 'kcal/day', color: '#9F7AEA', icon: <Zap size={20} color={'#9F7AEA'} /> },
+    { label: 'Target', value: profileData.profile.daily_calories ? Math.round(profileData.profile.daily_calories).toLocaleString() : '—', sub: 'kcal/day', color: C.primary, icon: <Target size={20} color={C.primary} /> },
+    { label: 'Protein', value: profileData.profile.protein_g ? `${Math.round(profileData.profile.protein_g)}g` : '—', sub: 'daily goal', color: C.green, icon: <Dumbbell size={20} color={C.green} /> },
+    { label: 'Water', value: profileData.profile.water_ml ? `${(profileData.profile.water_ml / 1000).toFixed(1)}L` : '—', sub: 'daily quota', color: '#0BC5EA', icon: <Droplets size={20} color={'#0BC5EA'} /> },
+  ] : []
+
+  const fileInputRef = useRef(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      setUploadingImage(true)
+      await uploadProfileImage(file)
+      await loadProfile()
+    } catch (err) {
+      console.error(err)
+      alert(err.message)
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  if (loading) {
+    return <div style={{ paddingTop: 72, background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>
+  }
+
+  const avatarUrl = profileData?.profile_picture_url 
+    ? `http://127.0.0.1:8000${profileData.profile_picture_url}`
+    : "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=144&h=144&fit=crop&face"
 
   return (
     <div style={{ paddingTop: 72, background: C.bg, minHeight: '100vh', display: 'flex' }}>
@@ -51,12 +161,23 @@ export default function ProfilePage({ onNavigate, onLogout, isPremium }) {
         {/* Avatar */}
         <div style={{ textAlign: 'center', marginBottom: 24, paddingBottom: 24, borderBottom: `1px solid ${C.border}` }}>
           <div style={{ position: 'relative', width: 72, height: 72, margin: '0 auto 12px' }}>
-            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=144&h=144&fit=crop&face" alt="Avatar" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${C.primary}` }} />
-            <button style={{ position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, borderRadius: '50%', background: C.primary, border: '2px solid white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img src={avatarUrl} alt="Avatar" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${C.primary}`, opacity: uploadingImage ? 0.5 : 1 }} />
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingImage}
+              style={{ position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, borderRadius: '50%', background: C.primary, border: '2px solid white', cursor: uploadingImage ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
               <Edit3 size={11} color="#fff" />
             </button>
+            <input 
+              type="file" 
+              accept="image/*" 
+              ref={fileInputRef} 
+              style={{ display: 'none' }} 
+              onChange={handleImageUpload} 
+            />
           </div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>Vinay Yadavilli</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{profileData?.full_name || 'User'}</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 4 }}>
             {isPremium ? (
               <>
@@ -93,7 +214,7 @@ export default function ProfilePage({ onNavigate, onLogout, isPremium }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {[
                   { label: 'Full Name', value: editName, onChange: setEditName, editable: true },
-                  { label: 'Email', value: 'vinay@example.com', editable: false },
+                  { label: 'Email', value: profileData?.email || '', editable: false },
                   { label: 'Mobile', value: editMobile, onChange: setEditMobile, editable: true },
                 ].map(field => (
                   <div key={field.label}>
@@ -105,7 +226,7 @@ export default function ProfilePage({ onNavigate, onLogout, isPremium }) {
                     {!field.editable && <div style={{ fontSize: 11, color: C.ink3, marginTop: 4 }}>Email cannot be changed</div>}
                   </div>
                 ))}
-                <Button variant="primary" size="md">Save Changes</Button>
+                <Button variant="primary" size="md" onClick={handleSaveProfile} disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</Button>
               </div>
             </div>
           </div>
@@ -117,19 +238,62 @@ export default function ProfilePage({ onNavigate, onLogout, isPremium }) {
             <h2 style={{ fontSize: 24, fontWeight: 800, color: C.ink, margin: 0, marginBottom: 28 }}>Health Information</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32 }}>
               <div style={{ background: C.card, borderRadius: 16, padding: '24px', border: `1px solid ${C.border}` }}>
-                {[['Age', '25'], ['Gender', 'Male'], ['Height', '175 cm'], ['Weight', '70 kg'], ['Target Weight', '80 kg']].map(([l, v]) => (
-                  <div key={l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: `1px solid ${C.border}` }}>
-                    <span style={{ fontSize: 14, color: C.ink2 }}>{l}</span>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>{v}</span>
+                {/* Editable Health Info */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: C.ink2 }}>Age</label>
+                    <input type="number" value={editAge} onChange={e => setEditAge(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${C.border}`, borderRadius: 8, outline: 'none' }} />
                   </div>
-                ))}
-                {[['Activity Level', 'Moderate'], ['Goal', 'Weight Gain'], ['Food Preference', 'Non-Veg']].map(([l, v]) => (
-                  <div key={l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: `1px solid ${C.border}` }}>
-                    <span style={{ fontSize: 14, color: C.ink2 }}>{l}</span>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: C.primary }}>{v}</span>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: C.ink2 }}>Gender</label>
+                    <select value={editGender} onChange={e => setEditGender(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${C.border}`, borderRadius: 8, outline: 'none', background: '#fff' }}>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                    </select>
                   </div>
-                ))}
-                <div style={{ marginTop: 20 }}><Button variant="primary" size="md" fullWidth>Update Health Info</Button></div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: C.ink2 }}>Height (cm)</label>
+                      <input type="number" value={editHeight} onChange={e => setEditHeight(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${C.border}`, borderRadius: 8, outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: C.ink2 }}>Weight (kg)</label>
+                      <input type="number" value={editWeight} onChange={e => setEditWeight(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${C.border}`, borderRadius: 8, outline: 'none' }} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: C.ink2 }}>Target Weight (kg)</label>
+                    <input type="number" value={editTargetWeight} onChange={e => setEditTargetWeight(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${C.border}`, borderRadius: 8, outline: 'none' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: C.ink2 }}>Activity Level</label>
+                    <select value={editActivityLevel} onChange={e => setEditActivityLevel(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${C.border}`, borderRadius: 8, outline: 'none', background: '#fff' }}>
+                      <option value="sedentary">Sedentary</option>
+                      <option value="light">Light</option>
+                      <option value="moderate">Moderate</option>
+                      <option value="active">Active</option>
+                      <option value="very_active">Very Active</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: C.ink2 }}>Goal</label>
+                    <select value={editGoal} onChange={e => setEditGoal(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${C.border}`, borderRadius: 8, outline: 'none', background: '#fff' }}>
+                      <option value="weight_loss">Weight Loss</option>
+                      <option value="maintain">Maintain Weight</option>
+                      <option value="weight_gain">Weight Gain</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: C.ink2 }}>Food Preference</label>
+                    <select value={editFoodPref} onChange={e => setEditFoodPref(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${C.border}`, borderRadius: 8, outline: 'none', background: '#fff' }}>
+                      <option value="veg">Vegetarian</option>
+                      <option value="non_veg">Non-Vegetarian</option>
+                      <option value="vegan">Vegan</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 20 }}><Button variant="primary" size="md" fullWidth onClick={handleSaveHealth} disabled={saving}>{saving ? 'Saving...' : 'Update Health Info'}</Button></div>
               </div>
 
               <div>
@@ -138,7 +302,7 @@ export default function ProfilePage({ onNavigate, onLogout, isPremium }) {
                   {healthMetrics.map(m => (
                     <div key={m.label} style={{ background: C.card, borderRadius: 14, padding: '16px', border: `1px solid ${C.border}`, textAlign: 'center' }}>
                       <div style={{ width: 44, height: 44, borderRadius: '50%', background: `${m.color}15`, border: `2px solid ${m.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
-                        <span style={{ fontSize: 13, fontWeight: 800, color: m.color }}>{m.value.split(',')[0].replace(/[^0-9.]/g, '').slice(0, 2) || '—'}</span>
+                        {m.icon}
                       </div>
                       <div style={{ fontSize: 16, fontWeight: 800, color: m.color }}>{m.value}</div>
                       <div style={{ fontSize: 11, color: C.ink3, marginTop: 2 }}>{m.sub}</div>

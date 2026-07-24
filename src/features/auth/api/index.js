@@ -10,7 +10,11 @@ export const loginWithPassword = async (email, password) => {
     const errorData = await response.json();
     throw new Error(errorData.detail || 'Failed to login with password');
   }
-  return await response.json();
+  const data = await response.json();
+  if (data.access_token) {
+    localStorage.setItem('cookbook_token', data.access_token);
+  }
+  return data;
 };
 
 export const sendOtp = async (email, purpose = 'login') => {
@@ -36,7 +40,11 @@ export const loginWithOtp = async (email, otpCode) => {
     const errorData = await response.json();
     throw new Error(errorData.detail || 'Failed to login with OTP');
   }
-  return await response.json();
+  const data = await response.json();
+  if (data.access_token) {
+    localStorage.setItem('cookbook_token', data.access_token);
+  }
+  return data;
 };
 
 export const register = async (userData) => {
@@ -67,9 +75,14 @@ export const verifyEmailOtp = async (email, otpCode, purpose = 'register') => {
     const errorData = await response.json();
     throw new Error(errorData.detail || 'Failed to verify OTP');
   }
-  return await response.json();
+  const data = await response.json();
+  if (data.access_token) {
+    localStorage.setItem('cookbook_token', data.access_token);
+  }
+  return data;
 };
 
 export const logout = async () => {
+  localStorage.removeItem('cookbook_token');
   return { success: true };
 };

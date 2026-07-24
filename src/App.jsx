@@ -38,19 +38,77 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isPremium, setIsPremium] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
+  const [navState, setNavState] = useState({})
+
+  useEffect(() => {
+    const token = localStorage.getItem('cookbook_token')
+    let initialScreen = 'landing'
+    let initialNavState = {}
+    
+    if (token) {
+      setIsAuthenticated(true)
+      initialScreen = localStorage.getItem('cookbook_screen') || 'home'
+      const savedNavState = localStorage.getItem('cookbook_navState')
+      if (savedNavState) {
+        try { initialNavState = JSON.parse(savedNavState) } catch (e) {}
+      }
+      setScreen(initialScreen)
+      setNavState(initialNavState)
+    }
+
+    // Set initial history state if empty
+    const url = new URL(window.location)
+    url.searchParams.set('screen', initialScreen)
+    if (initialNavState.recipeId) {
+      url.searchParams.set('recipeId', initialNavState.recipeId)
+    }
+    window.history.replaceState({ screen: initialScreen, params: initialNavState }, '', url.toString())
+
+    const handlePopState = (event) => {
+      if (event.state && event.state.screen) {
+        setScreen(event.state.screen)
+        setNavState(event.state.params || {})
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
 
   const handleLogout = () => {
     setIsAuthenticated(false)
     setIsPremium(false)
     setScreen('landing')
+    localStorage.removeItem('cookbook_token')
+    localStorage.removeItem('cookbook_screen')
   }
 
-  const navigate = (s) => {
+  const navigate = (s, params = {}) => {
     if ((s === 'ai-chat' || s === 'meal-planner') && !isPremium) {
       setScreen('subscription')
+      window.history.pushState({ screen: 'subscription', params: {} }, '')
       return
     }
     setScreen(s)
+    setNavState(params)
+    
+    const url = new URL(window.location)
+    url.searchParams.set('screen', s)
+    if (params.recipeId) {
+      url.searchParams.set('recipeId', params.recipeId)
+    } else {
+      url.searchParams.delete('recipeId')
+    }
+    window.history.pushState({ screen: s, params }, '', url.toString())
+    
+    if (s !== 'landing' && s !== 'auth' && s !== 'onboarding') {
+      localStorage.setItem('cookbook_screen', s)
+      if (Object.keys(params).length > 0) {
+        localStorage.setItem('cookbook_navState', JSON.stringify(params))
+      } else {
+        localStorage.removeItem('cookbook_navState')
+      }
+    }
   }
 
   const handleLandingRecipeClick = () => {
@@ -67,7 +125,7 @@ export default function App() {
       case 'onboarding': return <OnboardingScreen onComplete={() => { setIsAuthenticated(true); navigate('home'); }} />
       case 'home': return <HomeDashboard onNavigate={navigate} isPremium={isPremium} />
       case 'recipes': return <RecipeBrowsePage onNavigate={navigate} isPremium={isPremium} />
-      case 'recipe-detail': return <RecipeDetailPage onNavigate={navigate} isPremium={isPremium} />
+      case 'recipe-detail': return <RecipeDetailPage onNavigate={navigate} isPremium={isPremium} recipeId={navState?.recipeId} />
       case 'search': return <IngredientSearchPage />
       case 'meal-planner': return <MealPlannerPage isPremium={isPremium} onNavigate={navigate} />
       case 'grocery': return <GroceryListPage />
