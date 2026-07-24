@@ -65,7 +65,12 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
     <div style={{ paddingTop: 72, background: C.bg, minHeight: '100vh' }}>
       {/* ── Hero ── */}
       <div style={{ position: 'relative', height: 500, overflow: 'hidden' }}>
-        <img src={recipe.cover_image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'} alt={recipe.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img
+          src={recipe.cover_image_url || recipe.image_url || recipe.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&h=400&fit=crop'}
+          alt={recipe.title}
+          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&h=400&fit=crop' }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 50%, transparent 80%)' }} />
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 40px 40px' }}>
           {/* Breadcrumb */}
