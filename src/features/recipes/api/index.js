@@ -1,28 +1,9 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
-
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('cookbook_token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-  };
-};
-
-const handleResponse = async (response) => {
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    if (response.status === 401) throw new Error(`401 Unauthorized: ${errorData.detail}`);
-    throw new Error(errorData.detail || 'API Error');
-  }
-  return await response.json();
-};
+import { apiFetch } from '@/shared/api/client';
 
 export const fetchFilterOptions = async () => {
-  const response = await fetch(`${BASE_URL}/recipes/filters`, {
+  return await apiFetch('/recipes/filters', {
     method: 'GET',
-    headers: getAuthHeaders(),
   });
-  return handleResponse(response);
 };
 
 export const fetchRecipes = async ({ category_id, cuisine_id, food_type, state_id, difficulty, max_time, min_time, search, page = 1, limit = 20 } = {}) => {
@@ -38,41 +19,31 @@ export const fetchRecipes = async ({ category_id, cuisine_id, food_type, state_i
   params.append('page', page);
   params.append('limit', limit);
 
-  const response = await fetch(`${BASE_URL}/recipes/?${params.toString()}`, {
+  return await apiFetch(`/recipes/?${params.toString()}`, {
     method: 'GET',
-    headers: getAuthHeaders(),
   });
-  return handleResponse(response);
 };
 
 export const fetchFeaturedRecipes = async () => {
-  const response = await fetch(`${BASE_URL}/recipes/featured`, {
+  return await apiFetch('/recipes/featured', {
     method: 'GET',
-    headers: getAuthHeaders(),
   });
-  return handleResponse(response);
 };
 
 export const fetchTrendingRecipes = async () => {
-  const response = await fetch(`${BASE_URL}/recipes/trending`, {
+  return await apiFetch('/recipes/trending', {
     method: 'GET',
-    headers: getAuthHeaders(),
   });
-  return handleResponse(response);
 };
 
 export const fetchRecipeDetails = async (id) => {
-  const response = await fetch(`${BASE_URL}/recipes/${id}`, {
+  return await apiFetch(`/recipes/${id}`, {
     method: 'GET',
-    headers: getAuthHeaders(),
   });
-  return handleResponse(response);
 };
 
 export const fetchScaledServings = async (id, count) => {
-  const response = await fetch(`${BASE_URL}/recipes/${id}/servings?count=${count}`, {
+  return await apiFetch(`/recipes/${id}/servings?count=${count}`, {
     method: 'GET',
-    headers: getAuthHeaders(),
   });
-  return handleResponse(response);
 };

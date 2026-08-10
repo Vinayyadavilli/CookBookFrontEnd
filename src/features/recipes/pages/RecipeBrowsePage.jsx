@@ -33,7 +33,7 @@ const getInitialFilter = (key, defaultVal) => {
   return defaultVal;
 };
 
-export default function RecipeBrowsePage({ onNavigate }) {
+export default function RecipeBrowsePage({ onNavigate, navState }) {
   // Filter state (persisted across navigation)
   const [search, setSearch] = useState(() => getInitialFilter('search', ''))
   const [selectedCategory, setSelectedCategory] = useState(() => getInitialFilter('category_id', null))
@@ -48,6 +48,12 @@ export default function RecipeBrowsePage({ onNavigate }) {
   const [catOpen, setCatOpen] = useState(true)
   const [cuisineOpen, setCuisineOpen] = useState(true)
   const [stateOpen, setStateOpen] = useState(false)
+
+  useEffect(() => {
+    if (navState?.focus === 'category') {
+      setCatOpen(true)
+    }
+  }, [navState])
 
   // Filter options from API
   const [filterOptions, setFilterOptions] = useState({ categories: [], states: [], cuisines: [] })

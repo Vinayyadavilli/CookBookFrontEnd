@@ -32,20 +32,7 @@ export function LandingNavBar({ onNavigate }) {
         <span style={{ fontSize: 20, fontWeight: 800, color: C.ink, letterSpacing: '-0.02em' }}>Cook<span style={{ color: C.primary }}>Book</span></span>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 4 }}>
-        {[
-          ['Home', 'landing'],
-          ['Recipes', 'recipes'],
-          ['Categories', 'recipes'],
-          ['Premium', 'subscription']
-        ].map(([label, screen]) => (
-          <button key={label} onClick={() => onNavigate(screen)} style={{ fontSize: 14, fontWeight: 500, color: label === 'Premium' ? C.primary : C.ink2, padding: '6px 14px', borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
-            onMouseEnter={e => { e.target.style.background = C.primaryLight; e.target.style.color = C.primary }}
-            onMouseLeave={e => { e.target.style.background = 'transparent'; e.target.style.color = label === 'Premium' ? C.primary : C.ink2 }}>
-            {label === 'Premium' && <Crown size={13} fill={C.primary} color={C.primary} />}{label}
-          </button>
-        ))}
-      </div>
+      <div style={{ flex: 1 }} />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <Button variant="secondary" size="sm" onClick={() => onNavigate('auth')}>Log In</Button>

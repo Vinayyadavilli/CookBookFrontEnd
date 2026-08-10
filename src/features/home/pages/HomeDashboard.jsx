@@ -22,10 +22,10 @@ import { LandingNavBar } from '@/shared/components/navigation/LandingNavBar';
 import { fetchUserProfile } from '@/features/user/api';
 import { fetchFeaturedRecipes, fetchTrendingRecipes, fetchRecipes } from '@/features/recipes/api';
 
-export default function HomeDashboard({ onNavigate }) {
+export default function HomeDashboard({ onNavigate, isPremium, isAuthenticated, userProfile }) {
   const [activeFilter, setActiveFilter] = useState('All')
   const filters = ['All', 'Veg', 'Non-Veg', 'Breakfast', 'Snacks', 'Protein']
-  const [profileData, setProfileData] = useState(null)
+  const [profileData, setProfileData] = useState(userProfile || null)
   const [featured, setFeatured] = useState([])
   const [trending, setTrending] = useState([])
   const [goalRecipes, setGoalRecipes] = useState([])
@@ -34,12 +34,12 @@ export default function HomeDashboard({ onNavigate }) {
     const loadData = async () => {
       try {
         const [profileRes, featRes, trendRes, goalRes] = await Promise.all([
-          fetchUserProfile().catch(() => ({ data: null })),
+          isAuthenticated ? fetchUserProfile().catch(() => ({ data: userProfile })) : Promise.resolve({ data: null }),
           fetchFeaturedRecipes().catch(() => ({ data: [] })),
           fetchTrendingRecipes().catch(() => ({ data: [] })),
           fetchRecipes({ limit: 4 }).catch(() => ({ data: [] }))
         ])
-        setProfileData(profileRes.data)
+        if (profileRes?.data) setProfileData(profileRes.data)
         setFeatured(featRes.data || [])
         setTrending(trendRes.data || [])
         setGoalRecipes(goalRes.data || [])
@@ -48,44 +48,67 @@ export default function HomeDashboard({ onNavigate }) {
       }
     }
     loadData()
-  }, [])
+  }, [isAuthenticated, userProfile])
+
+  const userDisplayName = profileData?.full_name?.split(' ')[0] || userProfile?.full_name?.split(' ')[0] || 'Chef'
 
   return (
     <div style={{ paddingTop: 72, background: C.bg, minHeight: '100vh' }}>
 
-      {/* ── Personalized Greeting Card ── */}
+      {/* ── Greeting / Hero Card ── */}
       <section style={{ padding: '32px 32px 0', maxWidth: 1280, margin: '0 auto' }}>
         <div style={{ background: 'linear-gradient(135deg, #FF6B35 0%, #E55A2B 60%, #CC4E25 100%)', borderRadius: 24, padding: '28px 36px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.07)', pointerEvents: 'none' }} />
           <div style={{ position: 'absolute', bottom: -30, left: 200, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
-          <div style={{ zIndex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <span style={{ fontSize: 24 }}>☀️</span>
-              <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 26, fontWeight: 700, color: '#fff', margin: 0 }}>Good morning, {profileData?.full_name?.split(' ')[0] || 'Chef'}!</h2>
-            </div>
-            <p style={{ color: 'rgba(255,255,255,0.88)', fontSize: 16, margin: 0, marginBottom: 24, fontWeight: 500 }}>
-              You need <strong style={{ color: '#fff' }}>{profileData?.profile?.daily_calories ? Math.round(profileData.profile.daily_calories).toLocaleString() : '2,000'} kcal</strong> today to reach your {profileData?.profile?.goal?.replace('_', ' ') || 'nutrition'} goal 💪
-            </p>
-            {/* Stats row */}
-            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-              {[
-                { label: 'BMI', value: profileData?.profile?.bmi ? profileData.profile.bmi.toFixed(1) : '—', sub: (profileData?.profile?.bmi > 25 ? 'Overweight' : (profileData?.profile?.bmi < 18.5 ? 'Underweight' : 'Normal')), color: C.green },
-                { label: 'Goal', value: profileData?.profile?.goal ? profileData.profile.goal.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : '—', sub: profileData?.profile?.activity_level ? profileData.profile.activity_level.replace('_', ' ') : '—', color: C.gold },
-                { label: 'Daily Target', value: profileData?.profile?.daily_calories ? `${Math.round(profileData.profile.daily_calories).toLocaleString()} kcal` : '—', sub: profileData?.profile?.protein_g ? `Protein: ${Math.round(profileData.profile.protein_g)}g` : '—', color: '#fff' },
-                { label: 'Water', value: profileData?.profile?.water_ml ? `${(profileData.profile.water_ml / 1000).toFixed(1)} L` : '—', sub: 'Today\'s quota', color: '#7DD3F8' },
-              ].map(s => (
-                <div key={s.label} style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', borderRadius: 14, padding: '12px 18px', minWidth: 120 }}>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{s.label}</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 3 }}>{s.sub}</div>
+          
+          {isAuthenticated ? (
+            <>
+              <div style={{ zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 24 }}>☀️</span>
+                  <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 26, fontWeight: 700, color: '#fff', margin: 0 }}>Good morning, {userDisplayName}!</h2>
                 </div>
-              ))}
-            </div>
-          </div>
-          <div style={{ flexShrink: 0, zIndex: 1, textAlign: 'right' }}>
-            <Button variant="white" size="md" icon={<Zap size={14} />} onClick={() => onNavigate('meal-planner')}>Generate Meal Plan</Button>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 8 }}>AI-powered · Premium</div>
-          </div>
+                <p style={{ color: 'rgba(255,255,255,0.88)', fontSize: 16, margin: 0, marginBottom: 24, fontWeight: 500 }}>
+                  You need <strong style={{ color: '#fff' }}>{profileData?.profile?.daily_calories ? Math.round(profileData.profile.daily_calories).toLocaleString() : '2,000'} kcal</strong> today to reach your {profileData?.profile?.goal?.replace('_', ' ') || 'nutrition'} goal 💪
+                </p>
+                {/* Stats row */}
+                <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+                  {[
+                    { label: 'BMI', value: profileData?.profile?.bmi ? profileData.profile.bmi.toFixed(1) : '—', sub: (profileData?.profile?.bmi > 25 ? 'Overweight' : (profileData?.profile?.bmi < 18.5 ? 'Underweight' : 'Normal')), color: C.green },
+                    { label: 'Goal', value: profileData?.profile?.goal ? profileData.profile.goal.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : '—', sub: profileData?.profile?.activity_level ? profileData.profile.activity_level.replace('_', ' ') : '—', color: C.gold },
+                    { label: 'Daily Target', value: profileData?.profile?.daily_calories ? `${Math.round(profileData.profile.daily_calories).toLocaleString()} kcal` : '—', sub: profileData?.profile?.protein_g ? `Protein: ${Math.round(profileData.profile.protein_g)}g` : '—', color: '#fff' },
+                    { label: 'Water', value: profileData?.profile?.water_ml ? `${(profileData.profile.water_ml / 1000).toFixed(1)} L` : '—', sub: 'Today\'s quota', color: '#7DD3F8' },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', borderRadius: 14, padding: '12px 18px', minWidth: 120 }}>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{s.label}</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 3 }}>{s.sub}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ flexShrink: 0, zIndex: 1, textAlign: 'right' }}>
+                <Button variant="white" size="md" icon={<Zap size={14} />} onClick={() => onNavigate('meal-planner')}>Generate Meal Plan</Button>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 8 }}>AI-powered · Premium</div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 24 }}>👋</span>
+                  <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 26, fontWeight: 700, color: '#fff', margin: 0 }}>Welcome to CookBook!</h2>
+                </div>
+                <p style={{ color: 'rgba(255,255,255,0.88)', fontSize: 16, margin: 0, marginBottom: 16, fontWeight: 500, maxWidth: 540 }}>
+                  Discover over 10,000+ curated Indian recipes, personalized AI meal planning, and macro tracking.
+                </p>
+              </div>
+              <div style={{ flexShrink: 0, zIndex: 1, textAlign: 'right' }}>
+                <Button variant="white" size="md" onClick={() => onNavigate('auth')}>Log In / Sign Up</Button>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 8 }}>Free Account</div>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -114,7 +137,7 @@ export default function HomeDashboard({ onNavigate }) {
           <Button variant="ghost" size="sm" icon={<ChevronRight size={14} />} onClick={() => onNavigate('recipes')}>View all recipes</Button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
-          {featured.map(r => <RecipeCard key={r.id} recipe={r} onClick={() => onNavigate('recipe-detail')} />)}
+          {featured.map(r => <RecipeCard key={r.id} recipe={r} onClick={() => onNavigate && onNavigate('recipe-detail', { recipeId: r.id })} />)}
         </div>
       </section>
 
@@ -128,7 +151,7 @@ export default function HomeDashboard({ onNavigate }) {
           <Button variant="ghost" size="sm" icon={<ChevronRight size={14} />} onClick={() => onNavigate('recipes')}>View all</Button>
         </div>
         <div style={{ display: 'flex', gap: 16, overflowX: 'auto', padding: '8px 0 12px', scrollSnapType: 'x mandatory' }}>
-          {trending.map(r => <div key={r.id} style={{ scrollSnapAlign: 'start' }}><RecipeCard recipe={r} size="trending" onClick={() => onNavigate('recipe-detail')} /></div>)}
+          {trending.map(r => <div key={r.id} style={{ scrollSnapAlign: 'start' }}><RecipeCard recipe={r} size="trending" onClick={() => onNavigate && onNavigate('recipe-detail', { recipeId: r.id })} /></div>)}
         </div>
       </section>
 
@@ -146,7 +169,7 @@ export default function HomeDashboard({ onNavigate }) {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
           {goalRecipes.map(r => (
-            <div key={r.id} onClick={() => onNavigate('recipe-detail')} style={{ background: C.card, borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: `1px solid ${C.border}`, cursor: 'pointer', transition: 'all 0.22s ease' }}
+            <div key={r.id} onClick={() => onNavigate && onNavigate('recipe-detail', { recipeId: r.id })} style={{ background: C.card, borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: `1px solid ${C.border}`, cursor: 'pointer', transition: 'all 0.22s ease' }}
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.12)' }}
               onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)' }}>
               <div style={{ position: 'relative', height: 160 }}>

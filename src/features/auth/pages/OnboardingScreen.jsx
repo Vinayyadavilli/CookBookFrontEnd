@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChefHat, ChevronRight, ChevronLeft, Check, TrendingUp, TrendingDown, Minus, Zap, Flame, Droplets, Loader2 } from 'lucide-react'
+import { ChefHat, ChevronRight, ChevronLeft, Check, TrendingUp, TrendingDown, Minus, Zap, Flame, Droplets, Loader2, AlertCircle } from 'lucide-react'
 import { updateUserProfile } from '@/features/user/api'
 
 function ProgressBar({ step, total }) {
@@ -238,6 +238,7 @@ function BMIGauge({ bmi }) {
 
 function StepSummary({ data, onComplete }) {
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
   const bmr = data.gender === 'male'
     ? 10 * data.weightKg + 6.25 * data.heightCm - 5 * data.age + 5
     : 10 * data.weightKg + 6.25 * data.heightCm - 5 * data.age - 161
@@ -256,6 +257,7 @@ function StepSummary({ data, onComplete }) {
   const handleComplete = async () => {
     try {
       setSaving(true)
+      setError(null)
       
       const goalMap = { lose: 'weight_loss', maintain: 'maintain', gain: 'weight_gain' }
       const actMap = ['sedentary', 'light', 'moderate', 'heavy', 'athlete']
@@ -274,8 +276,7 @@ function StepSummary({ data, onComplete }) {
       onComplete()
     } catch (err) {
       console.error('Failed to save onboarding data:', err)
-      // Call onComplete anyway to not block the user, or show error toast
-      onComplete()
+      setError(err.message || 'Failed to save profile. Please ensure backend is active.')
     } finally {
       setSaving(false)
     }
@@ -324,9 +325,16 @@ function StepSummary({ data, onComplete }) {
         </div>
       </div>
 
+      {error && (
+        <div style={{ background: '#FFF5F5', border: '1px solid #FEB2B2', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, color: '#C53030', fontSize: 13 }}>
+          <AlertCircle size={18} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1, lineHeight: 1.4 }}>{error}</span>
+        </div>
+      )}
+
       <button onClick={handleComplete} disabled={saving}
         style={{ width: '100%', padding: '16px', borderRadius: 999, border: 'none', background: 'linear-gradient(135deg, #FF6B35 0%, #E55A2B 100%)', color: '#fff', fontSize: 16, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 6px 24px rgba(255,107,53,0.35)', letterSpacing: '0.01em', opacity: saving ? 0.7 : 1 }}>
-        {saving ? <Loader2 size={18} className="spin" style={{ animation: 'spin 1s linear infinite' }} /> : 'Start Exploring Recipes'}
+        {saving ? <Loader2 size={18} className="spin" style={{ animation: 'spin 1s linear infinite' }} /> : (error ? 'Retry Saving Profile' : 'Start Exploring Recipes')}
         {!saving && <ChevronRight size={18} />}
       </button>
     </div>
@@ -402,15 +410,6 @@ export default function OnboardingScreen({ onComplete }) {
                 Continue <ChevronRight size={16} />
               </button>
             </div>
-          )}
-
-          {step < 5 && (
-            <p style={{ textAlign: 'center', marginTop: 16, fontSize: 12, color: '#A0AEC0' }}>
-              Skip for now →{' '}
-              <button onClick={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))} style={{ background: 'none', border: 'none', color: '#A0AEC0', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit', textDecoration: 'underline', padding: 0 }}>
-                I'll do this later
-              </button>
-            </p>
           )}
         </div>
       </div>

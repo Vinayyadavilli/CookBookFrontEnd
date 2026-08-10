@@ -462,7 +462,7 @@ export default function AuthScreen({ onComplete }) {
           </div>
           <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: '#A0AEC0' }}>
             Exploring the design?{' '}
-            <button onClick={onComplete} style={{ background: 'none', border: 'none', color: '#FF6B35', fontWeight: 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', padding: 0 }}>
+            <button onClick={() => onComplete && onComplete('register')} style={{ background: 'none', border: 'none', color: '#FF6B35', fontWeight: 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', padding: 0 }}>
               Go to Onboarding →
             </button>
           </p>

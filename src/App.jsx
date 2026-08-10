@@ -32,10 +32,12 @@ import AuthScreen from '@/features/auth/pages/AuthScreen';
 import OnboardingScreen from '@/features/auth/pages/OnboardingScreen';
 import { NavBar } from '@/shared/components/navigation/NavBar';
 import { LandingNavBar } from '@/shared/components/navigation/LandingNavBar';
+import { fetchUserProfile } from '@/features/user/api';
 
 export default function App() {
   const [screen, setScreen] = useState('landing')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [userProfile, setUserProfile] = useState(null)
   const [isPremium, setIsPremium] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [navState, setNavState] = useState({})
@@ -47,14 +49,30 @@ export default function App() {
     
     if (token) {
       setIsAuthenticated(true)
+      fetchUserProfile()
+        .then(res => {
+          if (res?.data) setUserProfile(res.data)
+        })
+        .catch(err => {
+          if (err.message && err.message.includes('401')) {
+            setIsAuthenticated(false)
+            setUserProfile(null)
+            localStorage.removeItem('cookbook_token')
+          }
+        })
       initialScreen = localStorage.getItem('cookbook_screen') || 'home'
       const savedNavState = localStorage.getItem('cookbook_navState')
       if (savedNavState) {
         try { initialNavState = JSON.parse(savedNavState) } catch (e) {}
       }
-      setScreen(initialScreen)
-      setNavState(initialNavState)
+    } else {
+      setIsAuthenticated(false)
+      setUserProfile(null)
+      initialScreen = 'landing'
     }
+
+    setScreen(initialScreen)
+    setNavState(initialNavState)
 
     // Set initial history state if empty
     const url = new URL(window.location)
@@ -78,12 +96,36 @@ export default function App() {
   const handleLogout = () => {
     setIsAuthenticated(false)
     setIsPremium(false)
+    setUserProfile(null)
     setScreen('landing')
     localStorage.removeItem('cookbook_token')
     localStorage.removeItem('cookbook_screen')
+    localStorage.removeItem('cookbook_navState')
+  }
+
+  const handleAuthSuccess = (mode) => {
+    setIsAuthenticated(true)
+    fetchUserProfile()
+      .then(res => {
+        if (res?.data) setUserProfile(res.data)
+      })
+      .catch(() => {})
+    if (mode === 'register') {
+      navigate('onboarding')
+    } else {
+      navigate('home')
+    }
   }
 
   const navigate = (s, params = {}) => {
+    if (!isAuthenticated && s !== 'landing' && s !== 'auth' && s !== 'onboarding') {
+      setShowLoginModal(true)
+      return
+    }
+    if (s === 'categories') {
+      s = 'recipes'
+      params = { focus: 'category', ...params }
+    }
     if ((s === 'ai-chat' || s === 'meal-planner') && !isPremium) {
       setScreen('subscription')
       window.history.pushState({ screen: 'subscription', params: {} }, '')
@@ -121,10 +163,10 @@ export default function App() {
 
   const renderScreen = () => {
     switch (screen) {
-      case 'auth': return <AuthScreen onComplete={(mode) => { setIsAuthenticated(true); if (mode === 'register') { navigate('onboarding'); } else { navigate('home'); } }} />
+      case 'auth': return <AuthScreen onComplete={handleAuthSuccess} />
       case 'onboarding': return <OnboardingScreen onComplete={() => { setIsAuthenticated(true); navigate('home'); }} />
-      case 'home': return <HomeDashboard onNavigate={navigate} isPremium={isPremium} />
-      case 'recipes': return <RecipeBrowsePage onNavigate={navigate} isPremium={isPremium} />
+      case 'home': return <HomeDashboard onNavigate={navigate} isPremium={isPremium} isAuthenticated={isAuthenticated} userProfile={userProfile} />
+      case 'recipes': return <RecipeBrowsePage onNavigate={navigate} isPremium={isPremium} navState={navState} />
       case 'recipe-detail': return <RecipeDetailPage onNavigate={navigate} isPremium={isPremium} recipeId={navState?.recipeId} />
       case 'search': return <IngredientSearchPage />
       case 'meal-planner': return <MealPlannerPage isPremium={isPremium} onNavigate={navigate} />
@@ -157,7 +199,7 @@ export default function App() {
                 </p>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 44, flexWrap: 'wrap' }}>
                   <Button variant="primary" size="lg" icon={<Zap size={16} />} onClick={() => navigate('auth')}>Start Free — It's Free</Button>
-                  <Button variant="ghost" size="lg" icon={<ArrowRight size={16} />} onClick={() => navigate('recipes')}>Explore Recipes</Button>
+                  <Button variant="ghost" size="lg" icon={<ArrowRight size={16} />} onClick={handleLandingRecipeClick}>Explore Recipes</Button>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -304,7 +346,7 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
-      {showNav && <NavBar onNavigate={navigate} currentScreen={screen} isPremium={isPremium} />}
+      {showNav && <NavBar onNavigate={navigate} currentScreen={screen} isPremium={isPremium} isAuthenticated={isAuthenticated} userProfile={userProfile} onLogout={handleLogout} />}
 
       {renderScreen()}
 

@@ -1,89 +1,225 @@
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Bookmark, BookmarkCheck, Clock, ChefHat, Crown, Star, Flame,
-  Leaf, Users, Target, ShoppingCart, ChevronRight, ArrowRight,
-  Menu, X, Check, Bell, Search, Zap, TrendingUp, Award, MapPin,
-  Heart, Filter, Grid, List, ChevronDown, ChevronLeft, Send,
-  Plus, Minus, Printer, Share2, Trash2, MessageCircle, Bot,
-  LayoutDashboard, UtensilsCrossed, Settings, LogOut, HelpCircle,
-  CreditCard, History, ChartBar, BarChart3, PieChart, Dumbbell,
-  Droplets, Activity, Eye, EyeOff, Edit3, AlertCircle, Info,
-  CheckCircle, Package, Soup, Carrot
+  Plus, Check, Trash2, Printer, Share2, ShoppingCart
 } from 'lucide-react';
 import { C } from '@/shared/theme/tokens';
-import { RECIPES, TRENDING, CATEGORIES, ALL_SCREENS } from '@/shared/data/mockData';
-import { VegBadge, PremiumBadge, DifficultyBadge } from '@/shared/components/ui/Badges';
-import { RatingStars } from '@/shared/components/ui/RatingStars';
 import { Button } from '@/shared/components/ui/Button';
-import { RecipeCard } from '@/features/recipes/components/RecipeCard';
-import { NavBar } from '@/shared/components/navigation/NavBar';
-import { LandingNavBar } from '@/shared/components/navigation/LandingNavBar';
+
+const CATEGORY_OPTIONS = [
+  { name: 'Vegetables 🥦', color: '#48BB78' },
+  { name: 'Proteins 🍗', color: '#FC5C65' },
+  { name: 'Dairy 🥛', color: '#4299E1' },
+  { name: 'Spices 🌶️', color: '#F6C90E' },
+  { name: 'Grains & Staples 🌾', color: '#ED8936' },
+  { name: 'Other 🛒', color: '#A0AEC0' },
+];
 
 export default function GroceryListPage() {
-  const [purchased, setPurchased] = useState(new Set())
-  const categories = [
-    { name: 'Proteins 🍗', color: '#FC5C65', items: [{ id: 'c1', name: 'Chicken (Boneless)', qty: '3.5 kg' }, { id: 'c2', name: 'Eggs', qty: '24 pieces' }, { id: 'c3', name: 'Paneer', qty: '500 g' }] },
-    { name: 'Vegetables 🥦', color: '#48BB78', items: [{ id: 'v1', name: 'Tomatoes', qty: '14 cups' }, { id: 'v2', name: 'Onions', qty: '8 large' }, { id: 'v3', name: 'Spinach', qty: '400 g' }, { id: 'v4', name: 'Garlic', qty: '3 bulbs' }] },
-    { name: 'Dairy 🥛', color: '#4299E1', items: [{ id: 'd1', name: 'Cream', qty: '400 ml' }, { id: 'd2', name: 'Butter', qty: '200 g' }, { id: 'd3', name: 'Yogurt', qty: '500 g' }] },
-    { name: 'Spices 🌶️', color: '#F6C90E', items: [{ id: 's1', name: 'Garam Masala', qty: '3 tbsp' }, { id: 's2', name: 'Turmeric', qty: '2 tsp' }, { id: 's3', name: 'Cumin Seeds', qty: '2 tbsp' }] },
-  ]
+  const [items, setItems] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cookbook_grocery_items');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const [itemName, setItemName] = useState('');
+  const [itemQty, setItemQty] = useState('');
+  const [itemCategory, setItemCategory] = useState(CATEGORY_OPTIONS[0].name);
+
+  // Sync to localStorage whenever items change
+  useEffect(() => {
+    try {
+      localStorage.setItem('cookbook_grocery_items', JSON.stringify(items));
+    } catch (e) {}
+  }, [items]);
+
+  const handleAddItem = (e) => {
+    e.preventDefault();
+    if (!itemName.trim()) return;
+
+    const catObj = CATEGORY_OPTIONS.find(c => c.name === itemCategory) || CATEGORY_OPTIONS[0];
+
+    const newItem = {
+      id: 'g_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+      name: itemName.trim(),
+      qty: itemQty.trim() || '1 item',
+      category: catObj.name,
+      color: catObj.color,
+      isPurchased: false,
+      createdAt: new Date().toISOString(),
+    };
+
+    setItems(prev => [newItem, ...prev]);
+    setItemName('');
+    setItemQty('');
+  };
+
   const togglePurchased = (id) => {
-    setPurchased(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next })
-  }
-  const total = categories.flatMap(c => c.items).length
-  const done = purchased.size
+    setItems(prev => prev.map(item => item.id === id ? { ...item, isPurchased: !item.isPurchased } : item));
+  };
+
+  const deleteItem = (id, e) => {
+    e.stopPropagation();
+    setItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const clearAll = () => {
+    if (window.confirm('Are you sure you want to clear all grocery items?')) {
+      setItems([]);
+    }
+  };
+
+  const clearPurchased = () => {
+    setItems(prev => prev.filter(item => !item.isPurchased));
+  };
+
+  // Group items by category
+  const groupedCategories = CATEGORY_OPTIONS.map(cat => {
+    const catItems = items.filter(i => i.category === cat.name);
+    return {
+      ...cat,
+      items: catItems,
+    };
+  }).filter(cat => cat.items.length > 0);
+
+  const totalCount = items.length;
+  const purchasedCount = items.filter(i => i.isPurchased).length;
 
   return (
     <div style={{ paddingTop: 72, background: C.bg, minHeight: '100vh' }}>
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 32px' }}>
+      <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px 32px' }}>
+        
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
           <div>
             <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 30, fontWeight: 800, color: C.ink, margin: 0 }}>Grocery List</h1>
-            <p style={{ fontSize: 14, color: C.ink2, margin: '4px 0 0' }}>My July Weight Gain Plan · {done}/{total} items purchased</p>
+            <p style={{ fontSize: 14, color: C.ink2, margin: '4px 0 0' }}>
+              {totalCount > 0 ? `${purchasedCount} of ${totalCount} items completed` : 'Add items manually to manage your shopping list'}
+            </p>
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.card, fontSize: 13, color: C.ink2, cursor: 'pointer', fontFamily: 'inherit' }}><Printer size={14} />Print</button>
-            <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.card, fontSize: 13, color: C.ink2, cursor: 'pointer', fontFamily: 'inherit' }}><Share2 size={14} />Share</button>
-            <button onClick={() => setPurchased(new Set())} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.card, fontSize: 13, color: C.red, cursor: 'pointer', fontFamily: 'inherit' }}><Trash2 size={14} />Clear</button>
-          </div>
+          {totalCount > 0 && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              {purchasedCount > 0 && (
+                <button onClick={clearPurchased} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.card, fontSize: 12, fontWeight: 600, color: C.ink2, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Clear Purchased
+                </button>
+              )}
+              <button onClick={clearAll} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.card, fontSize: 12, fontWeight: 600, color: C.red, cursor: 'pointer', fontFamily: 'inherit' }}>
+                <Trash2 size={13} /> Clear All
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Progress bar */}
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ height: 6, borderRadius: 3, background: C.muted, marginTop: 12 }}>
-            <div style={{ height: 6, borderRadius: 3, background: `linear-gradient(90deg, ${C.green}, #38A169)`, width: `${total > 0 ? (done / total) * 100 : 0}%`, transition: 'width 0.3s ease' }} />
-          </div>
-        </div>
-
-        {/* Categories */}
-        {categories.map(cat => (
-          <div key={cat.name} style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden', marginBottom: 16 }}>
-            <div style={{ padding: '14px 20px', borderLeft: `4px solid ${cat.color}`, background: C.muted, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{cat.name}</span>
-              <span style={{ fontSize: 12, color: C.ink3, marginLeft: 'auto' }}>{cat.items.filter(i => purchased.has(i.id)).length}/{cat.items.length}</span>
+        {totalCount > 0 && (
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ height: 6, borderRadius: 3, background: C.muted }}>
+              <div style={{ height: 6, borderRadius: 3, background: `linear-gradient(90deg, ${C.green}, #38A169)`, width: `${(purchasedCount / totalCount) * 100}%`, transition: 'width 0.3s ease' }} />
             </div>
-            {cat.items.map((item, i) => {
-              const done = purchased.has(item.id)
-              return (
-                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderTop: i > 0 ? `1px solid ${C.border}` : 'none', cursor: 'pointer', transition: 'background 0.1s' }}
-                  onClick={() => togglePurchased(item.id)}
-                  onMouseEnter={e => (e.currentTarget.style.background = C.muted)}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                  <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${done ? cat.color : C.border}`, background: done ? cat.color : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
-                    {done && <Check size={13} color="#fff" strokeWidth={3} />}
-                  </div>
-                  <span style={{ flex: 1, fontSize: 14, color: done ? C.ink3 : C.ink, textDecoration: done ? 'line-through' : 'none', fontWeight: 500 }}>{item.name}</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: done ? C.ink3 : cat.color }}>{item.qty}</span>
-                </div>
-              )
-            })}
           </div>
-        ))}
+        )}
+
+        {/* Add Item Form */}
+        <form onSubmit={handleAddItem} style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: '16px 20px', marginBottom: 32, boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            ➕ Add New Grocery Item
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr auto', gap: 10, alignItems: 'center' }}>
+            <input
+              type="text"
+              placeholder="Item name (e.g. Paneer, Tomatoes)"
+              value={itemName}
+              onChange={e => setItemName(e.target.value)}
+              style={{ padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.ink, background: C.muted, outline: 'none', fontFamily: 'inherit' }}
+              required
+            />
+            <input
+              type="text"
+              placeholder="Qty (e.g. 500g, 1kg)"
+              value={itemQty}
+              onChange={e => setItemQty(e.target.value)}
+              style={{ padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.ink, background: C.muted, outline: 'none', fontFamily: 'inherit' }}
+            />
+            <select
+              value={itemCategory}
+              onChange={e => setItemCategory(e.target.value)}
+              style={{ padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.ink, background: C.muted, outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
+            >
+              {CATEGORY_OPTIONS.map(cat => (
+                <option key={cat.name} value={cat.name}>{cat.name}</option>
+              ))}
+            </select>
+            <Button variant="primary" size="md" icon={<Plus size={16} />} type="submit">
+              Add
+            </Button>
+          </div>
+        </form>
+
+        {/* Grouped Category Lists */}
+        {groupedCategories.length > 0 ? (
+          groupedCategories.map(cat => (
+            <div key={cat.name} style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden', marginBottom: 20 }}>
+              <div style={{ padding: '14px 20px', borderLeft: `4px solid ${cat.color}`, background: C.muted, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{cat.name}</span>
+                <span style={{ fontSize: 12, color: C.ink3, fontWeight: 600 }}>
+                  {cat.items.filter(i => i.isPurchased).length} / {cat.items.length} items
+                </span>
+              </div>
+              {cat.items.map((item, i) => {
+                const done = item.isPurchased;
+                return (
+                  <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderTop: i > 0 ? `1px solid ${C.border}` : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+                    onClick={() => togglePurchased(item.id)}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.015)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                    
+                    <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${done ? cat.color : C.border}`, background: done ? cat.color : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+                      {done && <Check size={13} color="#fff" strokeWidth={3} />}
+                    </div>
+                    
+                    <span style={{ flex: 1, fontSize: 14, color: done ? C.ink3 : C.ink, textDecoration: done ? 'line-through' : 'none', fontWeight: 500 }}>
+                      {item.name}
+                    </span>
+                    
+                    <span style={{ fontSize: 13, fontWeight: 600, color: done ? C.ink3 : cat.color }}>
+                      {item.qty}
+                    </span>
+
+                    <button
+                      onClick={(e) => deleteItem(item.id, e)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, color: C.ink3, display: 'flex', alignItems: 'center', transition: 'color 0.15s' }}
+                      onMouseEnter={e => (e.currentTarget.style.color = C.red)}
+                      onMouseLeave={e => (e.currentTarget.style.color = C.ink3)}
+                      title="Remove item"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ))
+        ) : (
+          <div style={{ background: C.card, borderRadius: 20, border: `1.5px dashed ${C.border}`, padding: '56px 32px', textAlign: 'center' }}>
+            <div style={{ width: 64, height: 64, borderRadius: 20, background: C.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <ShoppingCart size={32} color={C.primary} />
+            </div>
+            <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 22, fontWeight: 800, color: C.ink, margin: '0 0 8px' }}>
+              Your Grocery List is Empty
+            </h3>
+            <p style={{ fontSize: 14, color: C.ink2, maxWidth: 420, margin: '0 auto 20px', lineHeight: 1.6 }}>
+              No pre-filled items. Use the input form above to manually add ingredients and groceries for your shopping list!
+            </p>
+          </div>
+        )}
+
       </div>
     </div>
-  )
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
