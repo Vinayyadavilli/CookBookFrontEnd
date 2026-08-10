@@ -47,3 +47,10 @@ export const fetchScaledServings = async (id, count) => {
     method: 'GET',
   });
 };
+
+export const fetchRecipesByIngredients = async (ingredientsList) => {
+  const query = Array.isArray(ingredientsList) ? ingredientsList.join(',') : ingredientsList;
+  return await apiFetch(`/recipes/search/ingredients?ingredients=${encodeURIComponent(query)}`, {
+    method: 'GET',
+  });
+};

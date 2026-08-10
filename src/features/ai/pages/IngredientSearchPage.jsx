@@ -20,10 +20,14 @@ import { RecipeCard } from '@/features/recipes/components/RecipeCard';
 import { NavBar } from '@/shared/components/navigation/NavBar';
 import { LandingNavBar } from '@/shared/components/navigation/LandingNavBar';
 
-export default function IngredientSearchPage() {
+import { fetchRecipesByIngredients } from '@/features/recipes/api';
+
+export default function IngredientSearchPage({ onNavigate }) {
   const [input, setInput] = useState('')
-  const [ingredients, setIngredients] = useState(['Chicken', 'Tomato', 'Onion'])
+  const [ingredients, setIngredients] = useState(['Onion', 'Rice', 'Curd'])
   const [searched, setSearched] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [results, setResults] = useState([])
 
   const addIngredient = () => {
     if (input.trim() && !ingredients.includes(input.trim())) {
@@ -32,7 +36,20 @@ export default function IngredientSearchPage() {
     }
   }
 
-  const matchResults = RECIPES.map((r, i) => ({ ...r, match: Math.floor(75 + Math.random() * 25) })).sort((a, b) => b.match - a.match)
+  const handleSearch = async () => {
+    if (ingredients.length === 0) return;
+    try {
+      setLoading(true)
+      setSearched(true)
+      const res = await fetchRecipesByIngredients(ingredients)
+      const data = res?.data || []
+      setResults(data)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div style={{ paddingTop: 72, background: C.bg, minHeight: '100vh' }}>
@@ -79,8 +96,8 @@ export default function IngredientSearchPage() {
             </div>
           )}
 
-          <button onClick={() => setSearched(true)} style={{ width: '100%', padding: '14px', background: ingredients.length === 0 ? '#ccc' : `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, border: 'none', borderRadius: 12, color: '#fff', fontSize: 15, fontWeight: 700, cursor: ingredients.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: ingredients.length > 0 ? '0 4px 16px rgba(255,107,53,0.35)' : 'none' }}>
-            <Search size={18} />Find Matching Recipes
+          <button onClick={handleSearch} disabled={loading} style={{ width: '100%', padding: '14px', background: ingredients.length === 0 ? '#ccc' : `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, border: 'none', borderRadius: 12, color: '#fff', fontSize: 15, fontWeight: 700, cursor: ingredients.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: ingredients.length > 0 ? '0 4px 16px rgba(255,107,53,0.35)' : 'none' }}>
+            <Search size={18} />{loading ? 'Searching Recipes...' : 'Find Matching Recipes'}
           </button>
         </div>
 
@@ -89,18 +106,61 @@ export default function IngredientSearchPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, padding: '12px 16px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}` }}>
               <CheckCircle size={18} color={C.green} />
-              <span style={{ fontSize: 15, color: C.ink }}><strong style={{ color: C.green }}>12 recipes found</strong> matching your ingredients</span>
+              <span style={{ fontSize: 15, color: C.ink }}><strong style={{ color: C.green }}>{results.length} recipes found</strong> matching your search</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
-              {matchResults.map(r => (
-                <div key={r.id} style={{ position: 'relative' }}>
-                  <RecipeCard recipe={r} />
-                  <div style={{ position: 'absolute', top: 10, right: 50, background: C.green, borderRadius: 999, padding: '3px 10px', display: 'flex', alignItems: 'center', gap: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>{r.match}% match</span>
+            {results.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+                {results.map(r => (
+                  <div
+                    key={r.id || r.recipe_id}
+                    onClick={() => onNavigate && onNavigate('recipe-detail', { recipeId: r.id || r.recipe_id })}
+                    style={{ background: C.card, borderRadius: 20, border: `1px solid ${C.border}`, overflow: 'hidden', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 16px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}
+                  >
+                    <div style={{ position: 'relative', height: 160, width: '100%', background: C.muted }}>
+                      <img
+                        src={r.cover_image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&fit=crop'}
+                        alt={r.title}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                      <div style={{ position: 'absolute', top: 12, right: 12, background: C.green, borderRadius: 999, padding: '4px 12px', color: '#fff', fontSize: 12, fontWeight: 800, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+                        {r.match_score || 100}% Match
+                      </div>
+                      {r.food_type && (
+                        <div style={{ position: 'absolute', top: 12, left: 12 }}>
+                          <VegBadge type={r.food_type} />
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ padding: 18, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <h4 style={{ fontSize: 16, fontWeight: 700, color: C.ink, margin: '0 0 8px', lineHeight: 1.3 }}>{r.title}</h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, color: C.ink2, marginBottom: 12 }}>
+                          {r.total_time_min && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={12} /> {r.total_time_min} mins</span>}
+                          {r.difficulty && <span style={{ textTransform: 'capitalize' }}>• {r.difficulty}</span>}
+                        </div>
+                        {r.matched_ingredients && r.matched_ingredients.length > 0 && (
+                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 12 }}>
+                            {r.matched_ingredients.map((m, idx) => (
+                              <span key={idx} style={{ fontSize: 10, fontWeight: 700, color: C.green, background: '#ECFDF5', padding: '2px 6px', borderRadius: 4 }}>
+                                ✓ {m}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.primary, display: 'flex', alignItems: 'center', gap: 4, marginTop: 8 }}>
+                        View Recipe <ArrowRight size={14} />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: C.ink3 }}>
+                <Search size={32} color={C.ink3} style={{ marginBottom: 12 }} />
+                <div>No recipes found matching these ingredients. Try adding ingredients like "Rice", "Onion", "Curd", or "Chicken"!</div>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -10,7 +10,7 @@ import {
   CreditCard, History, ChartBar, BarChart3, PieChart, Dumbbell,
   Droplets, Activity, Eye, EyeOff, Edit3, AlertCircle, Info,
   CheckCircle, Package, Soup, Carrot, ThumbsUp, Utensils, Timer,
-  Lightbulb, Pencil
+  Lightbulb, Pencil, Sparkles
 } from 'lucide-react';
 import { C } from '@/shared/theme/tokens';
 import { VegBadge, PremiumBadge, DifficultyBadge } from '@/shared/components/ui/Badges';
@@ -20,6 +20,13 @@ import { NavBar } from '@/shared/components/navigation/NavBar';
 import { LandingNavBar } from '@/shared/components/navigation/LandingNavBar';
 import { fetchRecipeDetails, fetchScaledServings, fetchRecipes } from '@/features/recipes/api';
 import { addFavorite, removeFavorite, rateRecipe, likeRecipe, submitReview, fetchReviews } from '@/features/recipes/api/engagement';
+
+const CustomChefHatIcon = ({ size = 15, color = 'currentColor', style = {} }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
+    <path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z" />
+    <path d="M6 17h12" />
+  </svg>
+);
 
 export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
   const [activeTab, setActiveTab] = useState('overview')
@@ -37,6 +44,7 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
   const [reviewComment, setReviewComment] = useState('')
   const [submittingReview, setSubmittingReview] = useState(false)
   const [reviewsList, setReviewsList] = useState([])
+  const [showPremiumModal, setShowPremiumModal] = useState(true)
 
   useEffect(() => {
     const loadData = async () => {
@@ -73,7 +81,7 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
   }, [recipeId])
 
   if (loading) {
-    return <div style={{ paddingTop: 72, background: C.bg, minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><ChefHat size={40} color={C.primary} style={{ animation: 'spin 2s linear infinite', opacity: 0.5 }} /></div>
+    return <div style={{ paddingTop: 72, background: C.bg, minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CustomChefHatIcon size={40} color={C.primary} style={{ animation: 'spin 2s linear infinite', opacity: 0.5 }} /></div>
   }
   
   if (!recipe) {
@@ -86,6 +94,7 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
   const ratingCount = recipe.rating_count || 0;
   const prepTime = recipe.prep_time_min || 0;
   const cookTime = recipe.cook_time_min || 0;
+  const isLocked = (recipe.is_premium === 1 || recipe.is_premium === true) && !isPremium;
 
   // Ingredient scaling helper
   const scaleNotes = (text, r) => {
@@ -108,23 +117,25 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
     { id: 'steps', icon: <Utensils size={15} />, label: 'Step by Step' },
     { id: 'nutrition', icon: <PieChart size={15} />, label: 'Nutrition' },
     { id: 'reviews', icon: <Star size={15} />, label: `Reviews (${ratingCount})` },
-    ...(recipe.chef_tips || recipe.cooking_tips ? [{ id: 'tips', icon: <Lightbulb size={15} />, label: 'Tips' }] : []),
+    ...(recipe.chef_tips || recipe.cooking_tips ? [{ id: 'tips', icon: <CustomChefHatIcon size={15} />, label: 'Tips' }] : []),
   ];
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh' }}>
       
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* ── HERO SECTION — Dark warm background, split layout ── */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div style={{ 
-        background: 'linear-gradient(135deg, #1A1A2E 0%, #2D1B12 30%, #3D2415 60%, #1A1A2E 100%)',
-        paddingTop: 72, position: 'relative', overflow: 'hidden'
-      }}>
-        {/* Subtle pattern overlay */}
-        <div style={{ position: 'absolute', inset: 0, opacity: 0.03, backgroundImage: 'radial-gradient(circle at 25% 25%, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
-        
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px 36px', display: 'grid', gridTemplateColumns: '1fr 420px', gap: 36, alignItems: 'center', position: 'relative' }}>
+      {/* ── HERO SECTION — Dark warm rounded rectangle banner ── */}
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '88px 24px 20px' }}>
+        <div style={{ 
+          background: 'linear-gradient(135deg, #1A1A2E 0%, #2D1B12 30%, #3D2415 60%, #1A1A2E 100%)',
+          borderRadius: 28, position: 'relative', overflow: 'hidden',
+          boxShadow: '0 16px 44px rgba(0,0,0,0.25)',
+          border: '1px solid rgba(255,255,255,0.08)'
+        }}>
+          {/* Subtle pattern overlay */}
+          <div style={{ position: 'absolute', inset: 0, opacity: 0.03, backgroundImage: 'radial-gradient(circle at 25% 25%, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
+          
+          <div style={{ padding: '36px 40px 40px', display: 'grid', gridTemplateColumns: '1fr 420px', gap: 36, alignItems: 'center', position: 'relative' }}>
           
           {/* ── LEFT COLUMN: Recipe Info ── */}
           <div>
@@ -159,7 +170,7 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
               )}
               {recipe.is_featured ? (
                 <span style={{ fontSize: 11, fontWeight: 700, padding: '5px 14px', borderRadius: 999, background: 'rgba(255,255,255,0.12)', color: '#fff', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 5, backdropFilter: 'blur(8px)' }}>
-                  <ChefHat size={12} /> CHEF SPECIAL
+                  <CustomChefHatIcon size={12} /> CHEF SPECIAL
                 </span>
               ) : null}
             </div>
@@ -193,7 +204,7 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
                 <>
                   <span style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.15)' }} />
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: 'rgba(255,255,255,0.75)', fontWeight: 500 }}>
-                    <ChefHat size={15} color="rgba(255,255,255,0.5)" /> Chef Special
+                    <CustomChefHatIcon size={15} color="rgba(255,255,255,0.5)" /> Chef Special
                   </span>
                 </>
               )}
@@ -279,18 +290,50 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
           </div>
         </div>
       </div>
+    </div>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* ── TAB NAVIGATION ── */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
       <div style={{ position: 'sticky', top: 72, zIndex: 50, background: C.card, borderBottom: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 0, padding: '0 24px', overflowX: 'auto' }}>
-          {tabItems.map(t => (
-            <button key={t.id} onClick={() => setActiveTab(t.id)}
-              style={{ padding: '15px 20px', border: 'none', background: 'none', display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: activeTab === t.id ? 700 : 500, color: activeTab === t.id ? C.primary : C.ink2, cursor: 'pointer', fontFamily: 'inherit', borderBottom: `3px solid ${activeTab === t.id ? C.primary : 'transparent'}`, transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0 }}>
-              {t.icon}{t.label}
-            </button>
-          ))}
+        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 8, padding: '10px 24px', overflowX: 'auto' }}>
+          {tabItems.map(t => {
+            const isActive = activeTab === t.id;
+            return (
+              <button key={t.id} onClick={() => setActiveTab(t.id)}
+                style={{
+                  padding: '7px 16px 7px 8px',
+                  borderRadius: 12,
+                  border: `1.5px solid ${isActive ? C.primary : 'transparent'}`,
+                  background: isActive ? C.primaryLight : 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 9,
+                  fontSize: 13,
+                  fontWeight: isActive ? 700 : 500,
+                  color: isActive ? C.primary : C.ink2,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
+                }}>
+                <span style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  background: isActive ? C.primary : C.muted,
+                  color: isActive ? '#fff' : C.ink2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s'
+                }}>
+                  {t.icon}
+                </span>
+                {t.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -366,26 +409,43 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
                   </button>
                 </div>
 
-                {/* Review cards row — only real reviews */}
+                {/* Review cards — show max 3 reviews then See More button */}
                 {reviewsList.length > 0 ? (
-                  <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
-                    {reviewsList.slice(0, 5).map((rev, idx) => (
-                      <div key={idx} style={{ background: C.muted, borderRadius: 16, padding: '20px', minWidth: 260, maxWidth: 280, border: `1px solid ${C.border}`, flexShrink: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                          <div style={{ width: 36, height: 36, borderRadius: '50%', background: `linear-gradient(135deg, ${C.primaryLight}, #FFD4C0)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: C.primary, fontSize: 14 }}>
-                            {(rev.user || rev.full_name || 'U')[0].toUpperCase()}
+                  <div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+                      {reviewsList.slice(0, 3).map((rev, idx) => (
+                        <div key={idx} style={{ background: C.muted, borderRadius: 16, padding: '18px 20px', border: `1px solid ${C.border}` }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                            <div style={{ width: 34, height: 34, borderRadius: '50%', background: `linear-gradient(135deg, ${C.primaryLight}, #FFD4C0)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: C.primary, fontSize: 13 }}>
+                              {(rev.user || rev.full_name || 'U')[0].toUpperCase()}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ fontSize: 13, fontWeight: 600, color: C.ink, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {rev.user || rev.full_name || 'User'}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: 11, color: C.ink3 }}>{rev.created_at || ''}</span>
                           </div>
-                          <div style={{ flex: 1 }}>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>{rev.user || rev.full_name || 'User'}</span>
+                          <div style={{ display: 'flex', gap: 2, marginBottom: 8 }}>
+                            {[1,2,3,4,5].map(s => <Star key={s} size={12} fill={s <= (rev.rating || 5) ? C.gold : 'none'} color={s <= (rev.rating || 5) ? C.gold : C.ink3} />)}
                           </div>
-                          <span style={{ fontSize: 11, color: C.ink3 }}>{rev.created_at || ''}</span>
+                          <p style={{ fontSize: 13, color: C.ink2, margin: 0, lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{rev.comment}</p>
                         </div>
-                        <div style={{ display: 'flex', gap: 2, marginBottom: 8 }}>
-                          {[1,2,3,4,5].map(s => <Star key={s} size={12} fill={s <= (rev.rating || 5) ? C.gold : 'none'} color={s <= (rev.rating || 5) ? C.gold : C.ink3} />)}
-                        </div>
-                        <p style={{ fontSize: 13, color: C.ink2, margin: 0, lineHeight: 1.55 }}>{rev.comment}</p>
+                      ))}
+                    </div>
+                    {reviewsList.length > 3 && (
+                      <div style={{ textAlign: 'center', marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+                        <button
+                          onClick={() => {
+                            setActiveTab('reviews');
+                            window.scrollTo({ top: 600, behavior: 'smooth' });
+                          }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 999, border: `1px solid ${C.border}`, background: C.card, color: C.primary, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', transition: 'all 0.2s' }}
+                        >
+                          See More Reviews ({reviewsList.length}) <ArrowRight size={14} />
+                        </button>
                       </div>
-                    ))}
+                    )}
                   </div>
                 ) : (
                   <div style={{ textAlign: 'center', padding: '32px 0', color: C.ink3 }}>
@@ -414,6 +474,57 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Overview Ingredients Section */}
+            <div style={{ background: C.card, borderRadius: 20, padding: '28px', border: `1px solid ${C.border}`, marginBottom: 28, boxShadow: '0 2px 12px rgba(0,0,0,0.03)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Package size={20} color={C.primary} />
+                  <h3 style={{ fontSize: 18, fontWeight: 700, color: C.ink, margin: 0 }}>Ingredients ({baseIngredients.length})</h3>
+                </div>
+                <button onClick={() => setActiveTab('ingredients')} style={{ background: 'none', border: 'none', color: C.primary, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Adjust Servings →</button>
+              </div>
+              {baseIngredients.length === 0 ? (
+                <div style={{ fontSize: 13, color: C.ink3, fontStyle: 'italic' }}>No ingredients listed for this recipe.</div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+                  {baseIngredients.map((ing, i) => {
+                    const nameText = ing.ingredient?.name || ing.notes || ing.name || 'Ingredient';
+                    const qtyStr = ing.quantity ? `${ing.quantity} ${ing.unit || ''}` : '';
+                    return (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: C.muted, borderRadius: 12, border: `1px solid ${C.border}` }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>{nameText}</span>
+                        {qtyStr && <span style={{ fontSize: 12, fontWeight: 700, color: C.primary }}>{qtyStr}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Overview Step-by-Step Section */}
+            <div style={{ background: C.card, borderRadius: 20, padding: '28px', border: `1px solid ${C.border}`, boxShadow: '0 2px 12px rgba(0,0,0,0.03)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                <ChefHat size={20} color={C.green} />
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: C.ink, margin: 0 }}>Cooking Instructions ({(recipe.steps || []).length} Steps)</h3>
+              </div>
+              {(recipe.steps || []).length === 0 ? (
+                <div style={{ fontSize: 13, color: C.ink3, fontStyle: 'italic' }}>No cooking steps listed for this recipe yet.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {(recipe.steps || []).map((step, idx) => (
+                    <div key={step.step_number || idx} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: C.primary, color: '#fff', fontSize: 14, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {step.step_number || idx + 1}
+                      </div>
+                      <div style={{ flex: 1, paddingTop: 4 }}>
+                        <p style={{ fontSize: 14, color: C.ink, lineHeight: 1.6, margin: 0 }}>{step.instruction}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -693,6 +804,53 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
                 {submittingReview ? 'Submitting...' : 'Submit Review'}
               </Button>
               <Button variant="outline" size="md" onClick={() => setShowRatingModal(false)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* ── PRO RECIPE LOCKED MODAL (FOR FREE USERS) ── */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {showPremiumModal && isLocked && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,12,20,0.85)', backdropFilter: 'blur(10px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={() => { setShowPremiumModal(false); onNavigate('recipes'); }}>
+          <div style={{ background: '#1A1D27', border: '1px solid rgba(246,201,14,0.4)', borderRadius: 24, padding: '36px 32px', maxWidth: 460, width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', position: 'relative' }}
+            onClick={e => e.stopPropagation()}>
+            <button onClick={() => { setShowPremiumModal(false); onNavigate('recipes'); }} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#8E8EA0', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <X size={18} />
+            </button>
+            <div style={{ width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg, #F6C90E, #FF9F1C)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 8px 24px rgba(246,201,14,0.35)' }}>
+              <Crown size={32} color="#1A1D27" />
+            </div>
+            <h2 style={{ fontSize: 24, fontWeight: 800, color: '#fff', margin: '0 0 10px', letterSpacing: '-0.02em' }}>PRO Recipe Locked 👑</h2>
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, margin: '0 0 24px' }}>
+              <strong style={{ color: '#F6C90E' }}>{recipe.title}</strong> is an exclusive Masterchef PRO recipe reserved for Premium members.
+            </p>
+            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '16px 20px', textAlign: 'left', marginBottom: 24, border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#fff' }}>
+                <Sparkles size={16} color="#F6C90E" /> Full step-by-step video instructions
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#fff' }}>
+                <Sparkles size={16} color="#F6C90E" /> Automatic serving size ingredient scaling
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#fff' }}>
+                <Sparkles size={16} color="#F6C90E" /> Precise macro breakdown & Pro Chef secrets
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <button
+                onClick={() => onNavigate('subscription')}
+                style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg, #F6C90E, #FF9F1C)', color: '#1A1D27', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(246,201,14,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              >
+                <Crown size={18} fill="#1A1D27" /> Upgrade to CookBook PRO 👑
+              </button>
+              <button
+                onClick={() => onNavigate('recipes')}
+                style={{ width: '100%', padding: '12px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                Explore Free Recipes
+              </button>
             </div>
           </div>
         </div>

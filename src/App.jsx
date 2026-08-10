@@ -27,6 +27,7 @@ import FavoritesPage from '@/features/user/pages/FavoritesPage';
 import ProfilePage from '@/features/user/pages/ProfilePage';
 import SubscriptionPage from '@/features/user/pages/SubscriptionPage';
 import AdminDashboard from '@/features/admin/pages/AdminDashboard';
+import AdminLoginScreen from '@/features/admin/pages/AdminLoginScreen';
 import NotificationsPage from '@/features/notifications/pages/NotificationsPage';
 import AuthScreen from '@/features/auth/pages/AuthScreen';
 import OnboardingScreen from '@/features/auth/pages/OnboardingScreen';
@@ -37,21 +38,31 @@ import { fetchUserProfile } from '@/features/user/api';
 export default function App() {
   const [screen, setScreen] = useState('landing')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => !!sessionStorage.getItem('cb_admin_token'))
   const [userProfile, setUserProfile] = useState(null)
   const [isPremium, setIsPremium] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [navState, setNavState] = useState({})
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const paramScreen = urlParams.get('screen')
+    const paramRecipeId = urlParams.get('recipeId')
+
     const token = localStorage.getItem('cookbook_token')
-    let initialScreen = 'landing'
-    let initialNavState = {}
+    let initialScreen = paramScreen || (token ? (localStorage.getItem('cookbook_screen') || 'home') : 'landing')
+    let initialNavState = paramRecipeId ? { recipeId: paramRecipeId } : {}
     
     if (token) {
       setIsAuthenticated(true)
       fetchUserProfile()
         .then(res => {
-          if (res?.data) setUserProfile(res.data)
+          if (res?.data) {
+            setUserProfile(res.data)
+            if (res.data.role === 'premium' || res.data.role === 'admin') {
+              setIsPremium(true)
+            }
+          }
         })
         .catch(err => {
           if (err.message && err.message.includes('401')) {
@@ -60,21 +71,21 @@ export default function App() {
             localStorage.removeItem('cookbook_token')
           }
         })
-      initialScreen = localStorage.getItem('cookbook_screen') || 'home'
-      const savedNavState = localStorage.getItem('cookbook_navState')
-      if (savedNavState) {
-        try { initialNavState = JSON.parse(savedNavState) } catch (e) {}
+      if (!paramScreen) {
+        const savedNavState = localStorage.getItem('cookbook_navState')
+        if (savedNavState) {
+          try { initialNavState = JSON.parse(savedNavState) } catch (e) {}
+        }
       }
     } else {
       setIsAuthenticated(false)
       setUserProfile(null)
-      initialScreen = 'landing'
     }
 
     setScreen(initialScreen)
     setNavState(initialNavState)
 
-    // Set initial history state if empty
+    // Set initial history state
     const url = new URL(window.location)
     url.searchParams.set('screen', initialScreen)
     if (initialNavState.recipeId) {
@@ -105,28 +116,37 @@ export default function App() {
 
   const handleAuthSuccess = (mode) => {
     setIsAuthenticated(true)
+    setShowLoginModal(false)
     fetchUserProfile()
       .then(res => {
-        if (res?.data) setUserProfile(res.data)
+        if (res?.data) {
+          setUserProfile(res.data)
+          if (res.data.role === 'premium' || res.data.role === 'admin') {
+            setIsPremium(true)
+          }
+        }
       })
       .catch(() => {})
     if (mode === 'register') {
-      navigate('onboarding')
+      navigate('onboarding', {}, true)
     } else {
-      navigate('home')
+      navigate('home', {}, true)
     }
   }
 
-  const navigate = (s, params = {}) => {
-    if (!isAuthenticated && s !== 'landing' && s !== 'auth' && s !== 'onboarding') {
-      setShowLoginModal(true)
+  const navigate = (s, params = {}, forceAuthenticated = false) => {
+    setShowLoginModal(false)
+    const userIsAuth = forceAuthenticated || isAuthenticated
+    if (!userIsAuth && s !== 'landing' && s !== 'auth' && s !== 'onboarding' && s !== 'admin-login') {
+      setScreen('auth')
       return
     }
     if (s === 'categories') {
       s = 'recipes'
       params = { focus: 'category', ...params }
     }
-    if ((s === 'ai-chat' || s === 'meal-planner') && !isPremium) {
+    const effectivePremium = isPremium || userProfile?.role === 'premium' || userProfile?.role === 'admin'
+    if ((s === 'ai-chat' || s === 'meal-planner') && !effectivePremium) {
       setScreen('subscription')
       window.history.pushState({ screen: 'subscription', params: {} }, '')
       return
@@ -168,14 +188,54 @@ export default function App() {
       case 'home': return <HomeDashboard onNavigate={navigate} isPremium={isPremium} isAuthenticated={isAuthenticated} userProfile={userProfile} />
       case 'recipes': return <RecipeBrowsePage onNavigate={navigate} isPremium={isPremium} navState={navState} />
       case 'recipe-detail': return <RecipeDetailPage onNavigate={navigate} isPremium={isPremium} recipeId={navState?.recipeId} />
-      case 'search': return <IngredientSearchPage />
+      case 'search': return <IngredientSearchPage onNavigate={navigate} />
       case 'meal-planner': return <MealPlannerPage isPremium={isPremium} onNavigate={navigate} />
       case 'grocery': return <GroceryListPage />
       case 'ai-chat': return <AIChatPage isPremium={isPremium} onNavigate={navigate} />
       case 'favorites': return <FavoritesPage onNavigate={navigate} />
       case 'profile': return <ProfilePage onNavigate={navigate} onLogout={handleLogout} isPremium={isPremium} />
       case 'subscription': return <SubscriptionPage isPremium={isPremium} setIsPremium={setIsPremium} onNavigate={navigate} />
-      case 'admin': return <AdminDashboard />
+      case 'admin-login':
+        return (
+          <AdminLoginScreen
+            onNavigate={navigate}
+            onAdminAuthSuccess={(res) => {
+              if (res?.access_token) {
+                localStorage.setItem('cookbook_token', res.access_token);
+                setIsAuthenticated(true);
+              }
+              setIsAdminAuthenticated(true);
+            }}
+          />
+        );
+      case 'admin':
+        if (!isAdminAuthenticated) {
+          return (
+            <AdminLoginScreen
+              onNavigate={navigate}
+              onAdminAuthSuccess={(res) => {
+                if (res?.access_token) {
+                  localStorage.setItem('cookbook_token', res.access_token);
+                  setIsAuthenticated(true);
+                }
+                setIsAdminAuthenticated(true);
+              }}
+            />
+          );
+        }
+        return (
+          <AdminDashboard
+            onNavigate={navigate}
+            userProfile={userProfile}
+            onLogout={() => {
+              sessionStorage.removeItem('cb_admin_token');
+              localStorage.removeItem('cookbook_token');
+              setIsAdminAuthenticated(false);
+              setIsAuthenticated(false);
+              navigate('admin-login');
+            }}
+          />
+        );
       case 'notifications': return <NotificationsPage />
       default: return (
         <div style={{ fontFamily: "'Inter', system-ui, sans-serif", minHeight: '100vh', background: C.bg }}>
@@ -340,7 +400,7 @@ export default function App() {
   }
 
   const isAuthScreen = screen === 'auth' || screen === 'onboarding'
-  const isAdminScreen = screen === 'admin'
+  const isAdminScreen = screen === 'admin' || screen === 'admin-login'
   const isLanding = screen === 'landing'
   const showNav = !isAuthScreen && !isAdminScreen && !isLanding
 
@@ -351,14 +411,14 @@ export default function App() {
       {renderScreen()}
 
       {/* Login Required Modal for Unauthenticated Visitors */}
-      {showLoginModal && (
+      {showLoginModal && screen !== 'auth' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}
           onClick={e => { if (e.target === e.currentTarget) setShowLoginModal(false) }}>
           <div style={{ background: C.card, borderRadius: 24, padding: '36px', maxWidth: 420, width: '90%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', border: `1px solid ${C.border}` }}>
             <div style={{ width: 56, height: 56, borderRadius: 18, background: 'linear-gradient(135deg, #FF6B35 0%, #E55A2B 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', boxShadow: '0 6px 20px rgba(255,107,53,0.35)' }}>
               <Users size={28} color="#fff" />
             </div>
-            <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 24, fontWeight: 800, color: C.ink, margin: '0 0 10px' }}>Registration Required 🔒</h3>
+            <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 24, fontWeight: 800, color: C.ink, margin: '0 0 10px' }}>Login Required 🔒</h3>
             <p style={{ fontSize: 14, color: C.ink2, lineHeight: 1.6, margin: '0 0 24px' }}>
               Only registered users can access and view recipes. Create a free account or sign in to explore thousands of delicious Indian recipes! 🍳
             </p>
