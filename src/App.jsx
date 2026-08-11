@@ -190,7 +190,7 @@ export default function App() {
       case 'recipe-detail': return <RecipeDetailPage onNavigate={navigate} isPremium={isPremium} recipeId={navState?.recipeId} />
       case 'search': return <IngredientSearchPage onNavigate={navigate} />
       case 'meal-planner': return <MealPlannerPage isPremium={isPremium} onNavigate={navigate} />
-      case 'grocery': return <GroceryListPage />
+      case 'grocery': return <GroceryListPage onNavigate={navigate} isPremium={isPremium} />
       case 'ai-chat': return <AIChatPage isPremium={isPremium} onNavigate={navigate} />
       case 'favorites': return <FavoritesPage onNavigate={navigate} />
       case 'profile': return <ProfilePage onNavigate={navigate} onLogout={handleLogout} isPremium={isPremium} />

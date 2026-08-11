@@ -476,159 +476,228 @@ export default function RecipeDetailPage({ onNavigate, isPremium, recipeId }) {
               ))}
             </div>
 
-            {/* Overview Ingredients Section */}
-            <div style={{ background: C.card, borderRadius: 20, padding: '28px', border: `1px solid ${C.border}`, marginBottom: 28, boxShadow: '0 2px 12px rgba(0,0,0,0.03)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <Package size={20} color={C.primary} />
-                  <h3 style={{ fontSize: 18, fontWeight: 700, color: C.ink, margin: 0 }}>Ingredients ({baseIngredients.length})</h3>
+            {/* Overview Ingredients & Steps or PRO Lock */}
+            {isLocked ? (
+              <div style={{ background: C.card, borderRadius: 24, padding: '48px 32px', border: `1px solid rgba(246,201,14,0.4)`, textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,0.08)', margin: '24px 0' }}>
+                <div style={{ width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg, #F6C90E, #FF9F1C)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 8px 24px rgba(246,201,14,0.35)' }}>
+                  <Crown size={32} color="#1A1D27" />
                 </div>
-                <button onClick={() => setActiveTab('ingredients')} style={{ background: 'none', border: 'none', color: C.primary, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Adjust Servings →</button>
-              </div>
-              {baseIngredients.length === 0 ? (
-                <div style={{ fontSize: 13, color: C.ink3, fontStyle: 'italic' }}>No ingredients listed for this recipe.</div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-                  {baseIngredients.map((ing, i) => {
-                    const nameText = ing.ingredient?.name || ing.notes || ing.name || 'Ingredient';
-                    const qtyStr = ing.quantity ? `${ing.quantity} ${ing.unit || ''}` : '';
-                    return (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: C.muted, borderRadius: 12, border: `1px solid ${C.border}` }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>{nameText}</span>
-                        {qtyStr && <span style={{ fontSize: 12, fontWeight: 700, color: C.primary }}>{qtyStr}</span>}
-                      </div>
-                    );
-                  })}
+                <h3 style={{ fontSize: 22, fontWeight: 800, color: C.ink, margin: '0 0 10px' }}>PRO Ingredients & Instructions Locked 🔒</h3>
+                <p style={{ fontSize: 14, color: C.ink2, maxWidth: 500, margin: '0 auto 24px', lineHeight: 1.6 }}>
+                  Full ingredients list, exact scaled quantities for servings, and step-by-step masterchef cooking instructions for <strong>{recipe.title}</strong> are exclusively reserved for CookBook PRO members.
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => onNavigate && onNavigate('subscription')}
+                    style={{ padding: '14px 28px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg, #F6C90E, #FF9F1C)', color: '#1A1D27', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(246,201,14,0.35)', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                  >
+                    <Crown size={18} fill="#1A1D27" /> Upgrade to CookBook PRO 👑
+                  </button>
+                  <button
+                    onClick={() => onNavigate && onNavigate('recipes')}
+                    style={{ padding: '14px 24px', borderRadius: 14, border: `1.5px solid ${C.border}`, background: C.card, color: C.ink, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                  >
+                    Explore Free Recipes
+                  </button>
                 </div>
-              )}
-            </div>
-
-            {/* Overview Step-by-Step Section */}
-            <div style={{ background: C.card, borderRadius: 20, padding: '28px', border: `1px solid ${C.border}`, boxShadow: '0 2px 12px rgba(0,0,0,0.03)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-                <ChefHat size={20} color={C.green} />
-                <h3 style={{ fontSize: 18, fontWeight: 700, color: C.ink, margin: 0 }}>Cooking Instructions ({(recipe.steps || []).length} Steps)</h3>
               </div>
-              {(recipe.steps || []).length === 0 ? (
-                <div style={{ fontSize: 13, color: C.ink3, fontStyle: 'italic' }}>No cooking steps listed for this recipe yet.</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {(recipe.steps || []).map((step, idx) => (
-                    <div key={step.step_number || idx} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: C.primary, color: '#fff', fontSize: 14, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {step.step_number || idx + 1}
-                      </div>
-                      <div style={{ flex: 1, paddingTop: 4 }}>
-                        <p style={{ fontSize: 14, color: C.ink, lineHeight: 1.6, margin: 0 }}>{step.instruction}</p>
-                      </div>
+            ) : (
+              <>
+                {/* Overview Ingredients Section */}
+                <div style={{ background: C.card, borderRadius: 20, padding: '28px', border: `1px solid ${C.border}`, marginBottom: 28, boxShadow: '0 2px 12px rgba(0,0,0,0.03)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <Package size={20} color={C.primary} />
+                      <h3 style={{ fontSize: 18, fontWeight: 700, color: C.ink, margin: 0 }}>Ingredients ({baseIngredients.length})</h3>
                     </div>
-                  ))}
+                    <button onClick={() => setActiveTab('ingredients')} style={{ background: 'none', border: 'none', color: C.primary, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Adjust Servings →</button>
+                  </div>
+                  {baseIngredients.length === 0 ? (
+                    <div style={{ fontSize: 13, color: C.ink3, fontStyle: 'italic' }}>No ingredients listed for this recipe.</div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+                      {baseIngredients.map((ing, i) => {
+                        const nameText = ing.ingredient?.name || ing.notes || ing.name || 'Ingredient';
+                        const qtyStr = ing.quantity ? `${ing.quantity} ${ing.unit || ''}` : '';
+                        return (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: C.muted, borderRadius: 12, border: `1px solid ${C.border}` }}>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>{nameText}</span>
+                            {qtyStr && <span style={{ fontSize: 12, fontWeight: 700, color: C.primary }}>{qtyStr}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+
+                {/* Overview Step-by-Step Section */}
+                <div style={{ background: C.card, borderRadius: 20, padding: '28px', border: `1px solid ${C.border}`, boxShadow: '0 2px 12px rgba(0,0,0,0.03)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                    <ChefHat size={20} color={C.green} />
+                    <h3 style={{ fontSize: 18, fontWeight: 700, color: C.ink, margin: 0 }}>Cooking Instructions ({(recipe.steps || []).length} Steps)</h3>
+                  </div>
+                  {(recipe.steps || []).length === 0 ? (
+                    <div style={{ fontSize: 13, color: C.ink3, fontStyle: 'italic' }}>No cooking steps listed for this recipe yet.</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      {(recipe.steps || []).map((step, idx) => (
+                        <div key={step.step_number || idx} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                          <div style={{ width: 32, height: 32, borderRadius: '50%', background: C.primary, color: '#fff', fontSize: 14, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {step.step_number || idx + 1}
+                          </div>
+                          <div style={{ flex: 1, paddingTop: 4 }}>
+                            <p style={{ fontSize: 14, color: C.ink, lineHeight: 1.6, margin: 0 }}>{step.instruction}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 
         {/* ── INGREDIENTS TAB ── */}
         {activeTab === 'ingredients' && (
-          <div>
-            {/* Servings selector */}
-            <div style={{ background: C.card, borderRadius: 20, padding: '24px 28px', border: `1px solid ${C.border}`, marginBottom: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.03)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-                <div>
-                  <h3 style={{ fontSize: 18, fontWeight: 700, color: C.ink, margin: 0 }}>Adjust Servings</h3>
-                  <p style={{ fontSize: 13, color: C.ink2, margin: '4px 0 0' }}>Scaled for <strong style={{ color: C.primary }}>{servings} {servings === 1 ? 'person' : 'people'}</strong></p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {[1, 2, 3, 4, 5, 6].map(n => (
-                    <button key={n} onClick={() => { setServings(n); setShowCustomInput(false); }}
-                      style={{ width: 40, height: 40, borderRadius: 12, border: `2px solid ${servings === n && !showCustomInput ? C.primary : C.border}`, background: servings === n && !showCustomInput ? C.primary : C.card, color: servings === n && !showCustomInput ? '#fff' : C.ink, fontSize: 15, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>
-                      {n}
-                    </button>
-                  ))}
-                  {showCustomInput ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <input type="number" min="1" max="100" value={customValue} autoFocus
-                        onChange={e => setCustomValue(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') { const v = parseInt(customValue, 10); if (v > 0 && v <= 100) setServings(v); setShowCustomInput(false); }
-                          if (e.key === 'Escape') setShowCustomInput(false);
-                        }}
-                        style={{ width: 56, height: 40, borderRadius: 12, border: `2px solid ${C.primary}`, textAlign: 'center', fontSize: 15, fontWeight: 700, outline: 'none', fontFamily: 'inherit', color: C.ink }}
-                      />
-                      <button onClick={() => { const v = parseInt(customValue, 10); if (v > 0 && v <= 100) setServings(v); setShowCustomInput(false); }}
-                        style={{ padding: '10px 14px', borderRadius: 12, border: 'none', background: C.primary, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Set</button>
-                    </div>
-                  ) : (
-                    <button onClick={() => { setShowCustomInput(true); setCustomValue(servings); }}
-                      style={{ padding: '10px 14px', borderRadius: 12, border: `2px solid ${C.border}`, background: C.card, fontSize: 13, fontWeight: 600, color: C.ink2, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      {servings > 6 ? `${servings} ✎` : 'Custom'}
-                    </button>
-                  )}
-                </div>
+          isLocked ? (
+            <div style={{ background: C.card, borderRadius: 24, padding: '48px 32px', border: `1px solid rgba(246,201,14,0.4)`, textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,0.08)', margin: '24px 0' }}>
+              <div style={{ width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg, #F6C90E, #FF9F1C)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 8px 24px rgba(246,201,14,0.35)' }}>
+                <Crown size={32} color="#1A1D27" />
+              </div>
+              <h3 style={{ fontSize: 22, fontWeight: 800, color: C.ink, margin: '0 0 10px' }}>PRO Ingredients Locked 🔒</h3>
+              <p style={{ fontSize: 14, color: C.ink2, maxWidth: 500, margin: '0 auto 24px', lineHeight: 1.6 }}>
+                Full ingredient quantities and serving size scaling for <strong>{recipe.title}</strong> are exclusively available to CookBook PRO members.
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => onNavigate && onNavigate('subscription')}
+                  style={{ padding: '14px 28px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg, #F6C90E, #FF9F1C)', color: '#1A1D27', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(246,201,14,0.35)', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                >
+                  <Crown size={18} fill="#1A1D27" /> Upgrade to CookBook PRO 👑
+                </button>
               </div>
             </div>
-
-            {/* Ingredients list */}
-            <div style={{ background: C.card, borderRadius: 20, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.03)' }}>
-              <div style={{ padding: '14px 24px', background: C.muted, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Package size={16} color={C.primary} />
-                <span style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>{baseIngredients.length} Ingredients</span>
-              </div>
-              {baseIngredients.map((ing, i) => {
-                const base = recipe?.base_servings || 1;
-                const ratio = servings / base;
-                const nameText = ing.ingredient?.name || ing.name || ing.ingredient_name || '';
-                const displayText = ing.notes ? (ratio === 1 ? ing.notes : scaleNotes(ing.notes, ratio)) : (nameText || 'Ingredient');
-                const baseQty = ing.quantity != null ? ing.quantity : 1;
-                const scaledQty = Math.round((baseQty * ratio) * 10) / 10;
-                const hasRealUnit = ing.unit && ing.unit.toLowerCase() !== 'unit';
-                let quantityBadge = '';
-                if (hasRealUnit) quantityBadge = `${scaledQty} ${ing.unit}`;
-                else if (!ing.notes) quantityBadge = `${scaledQty} pc`;
-
-                return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 24px', borderBottom: i < baseIngredients.length - 1 ? `1px solid ${C.border}` : 'none', background: i % 2 === 0 ? C.card : C.muted }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.primary, flexShrink: 0 }} />
-                      <span style={{ fontSize: 14, color: C.ink, fontWeight: 500 }}>{displayText}</span>
-                    </div>
-                    {quantityBadge && (
-                      <span style={{ fontSize: 13, fontWeight: 700, color: C.primary, background: C.primaryLight, padding: '4px 12px', borderRadius: 8, whiteSpace: 'nowrap' }}>
-                        {quantityBadge}
-                      </span>
+          ) : (
+            <div>
+              {/* Servings selector */}
+              <div style={{ background: C.card, borderRadius: 20, padding: '24px 28px', border: `1px solid ${C.border}`, marginBottom: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.03)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+                  <div>
+                    <h3 style={{ fontSize: 18, fontWeight: 700, color: C.ink, margin: 0 }}>Adjust Servings</h3>
+                    <p style={{ fontSize: 13, color: C.ink2, margin: '4px 0 0' }}>Scaled for <strong style={{ color: C.primary }}>{servings} {servings === 1 ? 'person' : 'people'}</strong></p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {[1, 2, 3, 4, 5, 6].map(n => (
+                      <button key={n} onClick={() => { setServings(n); setShowCustomInput(false); }}
+                        style={{ width: 40, height: 40, borderRadius: 12, border: `2px solid ${servings === n && !showCustomInput ? C.primary : C.border}`, background: servings === n && !showCustomInput ? C.primary : C.card, color: servings === n && !showCustomInput ? '#fff' : C.ink, fontSize: 15, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>
+                        {n}
+                      </button>
+                    ))}
+                    {showCustomInput ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <input type="number" min="1" max="100" value={customValue} autoFocus
+                          onChange={e => setCustomValue(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') { const v = parseInt(customValue, 10); if (v > 0 && v <= 100) setServings(v); setShowCustomInput(false); }
+                            if (e.key === 'Escape') setShowCustomInput(false);
+                          }}
+                          style={{ width: 56, height: 40, borderRadius: 12, border: `2px solid ${C.primary}`, textAlign: 'center', fontSize: 15, fontWeight: 700, outline: 'none', fontFamily: 'inherit', color: C.ink }}
+                        />
+                        <button onClick={() => { const v = parseInt(customValue, 10); if (v > 0 && v <= 100) setServings(v); setShowCustomInput(false); }}
+                          style={{ padding: '10px 14px', borderRadius: 12, border: 'none', background: C.primary, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Set</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => { setShowCustomInput(true); setCustomValue(servings); }}
+                        style={{ padding: '10px 14px', borderRadius: 12, border: `2px solid ${C.border}`, background: C.card, fontSize: 13, fontWeight: 600, color: C.ink2, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        {servings > 6 ? `${servings} ✎` : 'Custom'}
+                      </button>
                     )}
                   </div>
-                )
-              })}
+                </div>
+              </div>
+
+              {/* Ingredients list */}
+              <div style={{ background: C.card, borderRadius: 20, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.03)' }}>
+                <div style={{ padding: '14px 24px', background: C.muted, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Package size={16} color={C.primary} />
+                  <span style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>{baseIngredients.length} Ingredients</span>
+                </div>
+                {baseIngredients.map((ing, i) => {
+                  const base = recipe?.base_servings || 1;
+                  const ratio = servings / base;
+                  const nameText = ing.ingredient?.name || ing.name || ing.ingredient_name || '';
+                  const displayText = ing.notes ? (ratio === 1 ? ing.notes : scaleNotes(ing.notes, ratio)) : (nameText || 'Ingredient');
+                  const baseQty = ing.quantity != null ? ing.quantity : 1;
+                  const scaledQty = Math.round((baseQty * ratio) * 10) / 10;
+                  const hasRealUnit = ing.unit && ing.unit.toLowerCase() !== 'unit';
+                  let quantityBadge = '';
+                  if (hasRealUnit) quantityBadge = `${scaledQty} ${ing.unit}`;
+                  else if (!ing.notes) quantityBadge = `${scaledQty} pc`;
+
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 24px', borderBottom: i < baseIngredients.length - 1 ? `1px solid ${C.border}` : 'none', background: i % 2 === 0 ? C.card : C.muted }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.primary, flexShrink: 0 }} />
+                        <span style={{ fontSize: 14, color: C.ink, fontWeight: 500 }}>{displayText}</span>
+                      </div>
+                      {quantityBadge && (
+                        <span style={{ fontSize: 13, fontWeight: 700, color: C.primary, background: C.primaryLight, padding: '4px 12px', borderRadius: 8, whiteSpace: 'nowrap' }}>
+                          {quantityBadge}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
+          )
         )}
 
         {/* ── STEPS TAB ── */}
         {activeTab === 'steps' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ marginBottom: 8 }}>
-              <h3 style={{ fontSize: 20, fontWeight: 700, color: C.ink, margin: 0 }}>Step by Step Instructions</h3>
-              <p style={{ fontSize: 13, color: C.ink3, margin: '4px 0 0' }}>{(recipe.steps || []).length} steps to cook the perfect {recipe.title}</p>
-            </div>
-            {(recipe.steps || []).map(step => (
-              <div key={step.step_number} style={{ display: 'flex', gap: 20, padding: '24px 28px', background: C.card, borderRadius: 18, border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-                <div style={{ width: 44, height: 44, borderRadius: 14, background: 'linear-gradient(135deg, #FF6B35, #E55A2B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(255,107,53,0.3)' }}>
-                  <span style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>{step.step_number}</span>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 14, color: C.ink, lineHeight: 1.7, margin: 0, marginBottom: step.duration_min ? 12 : 0 }}>{step.instruction}</p>
-                  {step.duration_min > 0 && (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#EFF6FF', borderRadius: 8, padding: '5px 12px', border: '1px solid #DBEAFE' }}>
-                      <Clock size={12} color="#3B82F6" />
-                      <span style={{ fontSize: 12, fontWeight: 600, color: '#3B82F6' }}>{step.duration_min} min</span>
-                    </div>
-                  )}
-                </div>
+          isLocked ? (
+            <div style={{ background: C.card, borderRadius: 24, padding: '48px 32px', border: `1px solid rgba(246,201,14,0.4)`, textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,0.08)', margin: '24px 0' }}>
+              <div style={{ width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg, #F6C90E, #FF9F1C)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 8px 24px rgba(246,201,14,0.35)' }}>
+                <Crown size={32} color="#1A1D27" />
               </div>
-            ))}
-          </div>
+              <h3 style={{ fontSize: 22, fontWeight: 800, color: C.ink, margin: '0 0 10px' }}>PRO Cooking Instructions Locked 🔒</h3>
+              <p style={{ fontSize: 14, color: C.ink2, maxWidth: 500, margin: '0 auto 24px', lineHeight: 1.6 }}>
+                Step-by-step masterchef cooking instructions for <strong>{recipe.title}</strong> are exclusively reserved for CookBook PRO members.
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => onNavigate && onNavigate('subscription')}
+                  style={{ padding: '14px 28px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg, #F6C90E, #FF9F1C)', color: '#1A1D27', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(246,201,14,0.35)', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                >
+                  <Crown size={18} fill="#1A1D27" /> Upgrade to CookBook PRO 👑
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ marginBottom: 8 }}>
+                <h3 style={{ fontSize: 20, fontWeight: 700, color: C.ink, margin: 0 }}>Step by Step Instructions</h3>
+                <p style={{ fontSize: 13, color: C.ink3, margin: '4px 0 0' }}>{(recipe.steps || []).length} steps to cook the perfect {recipe.title}</p>
+              </div>
+              {(recipe.steps || []).map(step => (
+                <div key={step.step_number || step.id} style={{ display: 'flex', gap: 20, padding: '24px 28px', background: C.card, borderRadius: 18, border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 14, background: 'linear-gradient(135deg, #FF6B35, #E55A2B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(255,107,53,0.3)' }}>
+                    <span style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>{step.step_number}</span>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 14, color: C.ink, lineHeight: 1.7, margin: 0, marginBottom: step.duration_min ? 12 : 0 }}>{step.instruction}</p>
+                    {step.duration_min > 0 && (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#EFF6FF', borderRadius: 8, padding: '5px 12px', border: '1px solid #DBEAFE' }}>
+                        <Clock size={12} color="#3B82F6" />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#3B82F6' }}>{step.duration_min} min</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         )}
 
         {/* ── NUTRITION TAB ── */}

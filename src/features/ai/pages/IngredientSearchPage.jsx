@@ -109,7 +109,7 @@ export default function IngredientSearchPage({ onNavigate }) {
               <span style={{ fontSize: 15, color: C.ink }}><strong style={{ color: C.green }}>{results.length} recipes found</strong> matching your search</span>
             </div>
             {results.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
                 {results.map(r => (
                   <div
                     key={r.id || r.recipe_id}

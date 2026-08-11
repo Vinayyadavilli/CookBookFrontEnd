@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  ChefHat, Search, ChevronRight, ChevronDown, ChevronLeft, Filter, X
+  ChefHat, Search, ChevronRight, ChevronDown, ChevronLeft, Filter, X, Crown, Sparkles
 } from 'lucide-react';
 import { C } from '@/shared/theme/tokens';
 import { DifficultyBadge } from '@/shared/components/ui/Badges';
@@ -33,7 +33,9 @@ const getInitialFilter = (key, defaultVal) => {
   return defaultVal;
 };
 
-export default function RecipeBrowsePage({ onNavigate, navState }) {
+export default function RecipeBrowsePage({ onNavigate, isPremium, navState }) {
+  const [showProModal, setShowProModal] = useState(false);
+  const [selectedProRecipe, setSelectedProRecipe] = useState(null);
   // Filter state (persisted across navigation)
   const [search, setSearch] = useState(() => getInitialFilter('search', ''))
   const [selectedCategory, setSelectedCategory] = useState(() => getInitialFilter('category_id', null))
@@ -340,8 +342,24 @@ export default function RecipeBrowsePage({ onNavigate, navState }) {
             <button onClick={handleClear} style={{ marginTop: 16, padding: '10px 24px', borderRadius: 12, border: 'none', background: C.primary, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Clear Filters</button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 32 }}>
-            {recipes.map(r => <RecipeCard key={r.id} recipe={r} onClick={() => onNavigate && onNavigate('recipe-detail', { recipeId: r.id })} />)}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, marginBottom: 32 }}>
+            {recipes.map(r => {
+              const isPro = r.is_premium === 1 || r.is_premium === true;
+              return (
+                <RecipeCard
+                  key={r.id}
+                  recipe={r}
+                  onClick={() => {
+                    if (isPro && !isPremium) {
+                      setSelectedProRecipe(r);
+                      setShowProModal(true);
+                    } else {
+                      onNavigate && onNavigate('recipe-detail', { recipeId: r.id });
+                    }
+                  }}
+                />
+              );
+            })}
           </div>
         )}
 
@@ -366,6 +384,48 @@ export default function RecipeBrowsePage({ onNavigate, navState }) {
               style={{ padding: '8px 14px', borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.card, cursor: page >= totalPages ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: page >= totalPages ? C.border : C.ink2, opacity: page >= totalPages ? 0.5 : 1 }}>
               Next<ChevronRight size={14} />
             </button>
+          </div>
+        )}
+
+        {/* PRO RECIPE LOCKED MODAL DIALOG BOX */}
+        {showProModal && selectedProRecipe && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,12,20,0.85)', backdropFilter: 'blur(10px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+            onClick={() => setShowProModal(false)}>
+            <div style={{ background: '#1A1D27', border: '1px solid rgba(246,201,14,0.4)', borderRadius: 24, padding: '36px 32px', maxWidth: 460, width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', position: 'relative' }}
+              onClick={e => e.stopPropagation()}>
+              <button onClick={() => setShowProModal(false)} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#8E8EA0', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X size={18} />
+              </button>
+              <div style={{ width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg, #F6C90E, #FF9F1C)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 8px 24px rgba(246,201,14,0.35)' }}>
+                <Crown size={32} color="#1A1D27" />
+              </div>
+              <h2 style={{ fontSize: 24, fontWeight: 800, color: '#fff', margin: '0 0 10px', letterSpacing: '-0.02em' }}>PRO Recipe Locked 👑</h2>
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, margin: '0 0 24px' }}>
+                <strong style={{ color: '#F6C90E' }}>{selectedProRecipe.title}</strong> is an exclusive Masterchef PRO recipe reserved for Premium members.
+              </p>
+              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: '16px 20px', textAlign: 'left', marginBottom: 24, border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#fff' }}>
+                  <Sparkles size={16} color="#F6C90E" /> Unlock ingredients & exact scaled quantities
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#fff' }}>
+                  <Sparkles size={16} color="#F6C90E" /> Full step-by-step masterchef video instructions
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <button
+                  onClick={() => { setShowProModal(false); onNavigate && onNavigate('subscription'); }}
+                  style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg, #F6C90E, #FF9F1C)', color: '#1A1D27', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(246,201,14,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                >
+                  <Crown size={18} fill="#1A1D27" /> Upgrade to CookBook PRO 👑
+                </button>
+                <button
+                  onClick={() => setShowProModal(false)}
+                  style={{ width: '100%', padding: '12px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>
